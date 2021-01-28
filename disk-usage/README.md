@@ -17,7 +17,7 @@ so that you can use the storage tree script later on.
 
 On linux:
 
-    python disk_usage -n 50 > ~/disk_usage_ouput.txt
+    python disk_usage -n 50 > ~/disk_usage_output.txt
 
 ### Storage tree
 
@@ -44,4 +44,4 @@ Further documentation is available in the source code.
 
 As we did with ``disk_usage``, we will pipe the output to a file.
 
-    python storage_tree -s /tmp/disk_usage_output.txt > pydu_output.html
+    python HTML_colored_view -s ~/disk_usage_output.txt > ~/disk_usage_output.html
