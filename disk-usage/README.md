@@ -33,7 +33,7 @@ You won't be launching it directly: instead, we'll use ``views``.
 
 #### Custom views
 
-Once the storage tree is constructed, we can use a custom view to create a visualization of the data: 
+Once the tree is constructed, we can use a custom view to create a visualization of the data: 
 TXT, HTML, CSV, XML, and so on ; you decide !
 
 A few examples are available under the format ``X_view.py``.
@@ -44,4 +44,4 @@ Further documentation is available in the source code.
 
 As we did with ``disk_usage``, we will pipe the output to a file.
 
-    python HTML_colored_view -s ~/disk_usage_output.txt > ~/disk_usage_output.html
+    python HTML_colored_view.py -s ~/disk_usage_output.txt > ~/disk_usage_output.html
