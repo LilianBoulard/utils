@@ -69,10 +69,10 @@ class View:
         :return str:
         """
         p = obj.index / obj.nb_results
-        r = f"<li><a style=\"color: rgb({255 - (p * 255)}, 0, 0);\">"
+        r = f"<li><a style=\"color: rgb({int(255 - (p * 255))}, 0, 0);\">"
         if obj.index < 10:
             r += "<b>"
-        r += f"{obj.name} | {storage_tree.human_readable_bytes(obj.size)}"
+        r += f'<abbr title="{obj.path}">{obj.name}</abbr> | {storage_tree.human_readable_bytes(obj.size)}'
         if obj.index < 10:
             r += "</b>"
         r += f"</a></li>"
