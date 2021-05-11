@@ -34,6 +34,9 @@ class Cycle:
     def __len__(self) -> int:
         return len(self._iterable)
 
+    def __str__(self):
+        return str(self._iterable)
+
     def _increment_index(self) -> None:
         self._iter_index = (self._iter_index + 1) % len(self)
 
@@ -103,6 +106,12 @@ class RoundRobin:
     def __iter__(self):
         return iter(self.c)
 
+    def __getitem__(self, *args, **kwargs):
+        return self.c.__getitem__(*args, **kwargs)
+
+    def __setitem__(self, *args, **kwargs):
+        return self.c.__setitem__(*args, **kwargs)
+
     def __len__(self):
         return len(self.c)
 
@@ -112,9 +121,9 @@ class RoundRobin:
         Reads a file for a Round-Robin database.
         """
         with open(file_location, 'rb') as fl:
-            c = pickle.loads(fl.read())
+            c = pickle.load(fl)
 
-        rr = cls(length=len(c))
+        rr = cls(length=len(c), file_location=file_location)
         rr.c = c
         return rr
 
@@ -123,7 +132,7 @@ class RoundRobin:
         Takes the current sequence and write it to the disk.
         """
         with open(self.file_location, 'wb') as fl:
-            fl.write(pickle.dumps(self.c))
+            pickle.dump(self.c, fl)
 
     def append(self, value) -> None:
         """
