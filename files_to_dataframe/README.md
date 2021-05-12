@@ -5,8 +5,16 @@ Currently, two columns are created:
 1. ``path`` - the absolute path of the file
 2. ``size`` - the size of this file in bytes
 
-## Files
+One more is created after running ``post-processing.py``:
+3. ``extension`` - the extension of the file
 
-- ``files_to_dataframe.py`` parses the directory and constructs the DataFrame, 
+## Usage
+
+1. ``files_to_dataframe.py`` parses the directory and constructs the DataFrame, 
   storing it locally afterwards.
+2. ``post_processing.py`` extracts interesting features from the DataFrame.
+
+## Other files
+
 - ``by_extension.py`` contains utilities to manipulate the files' information based on their extension.
+- ``describe_dataframe.py`` can be used to describe a DataFrame and gain some insights on its content.
