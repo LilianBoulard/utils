@@ -6,6 +6,7 @@ This file can later be used for disk usage analytics.
 """
 
 import os
+import re
 import argparse
 import tracemalloc
 import pandas as pd
@@ -22,13 +23,21 @@ class FilesToDataFrame:
         # Temporary directory in which we will store the
         # temporary dataframes to limit memory usage.
         self.temp_dir = os.path.join(os.getcwd(), 'ftd_temp')
-        os.mkdir(self.temp_dir)
+        os.mkdir(self.temp_dir)  # If this raises FileExistsError, delete temp dir
 
         tracemalloc.start()
 
     @staticmethod
     def clean_path(p: str) -> str:
-        p = p.replace(os.sep, '_')
+        p = os.path.abspath(p)
+        # Divide parts
+        p_parts = p.split(os.sep)
+        # Clean parts
+        p_parts = [re.sub('[^A-Za-z0-9]+', '', part) for part in p_parts]
+        # Remove empties
+        p_parts = [part for part in p_parts if part != '']
+        # Construct name
+        p = '_'.join(p_parts)
         return p
 
     def _write_temp_df(self, data: list) -> None:
