@@ -2,28 +2,13 @@
 Provides tools to analyze the files based on their extension.
 """
 
-import os
 import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 
-column_name = 'extension'
-
-
-def get_extension(path) -> str:
-    file_name: str = path.split(os.sep)[-1]
-
-    # Remove the dot at the start of hidden files
-    if file_name.startswith('.'):
-        file_name = file_name[1:]
-
-    file_parts = file_name.split('.')
-    if len(file_parts) > 1:
-        return file_parts[-1].lower()
-    # If the file contains no dots, return empty
-    return ''
+extension_column_name = 'extension'
 
 
 def get_file_count_by_extension(dataframe):
@@ -32,8 +17,8 @@ def get_file_count_by_extension(dataframe):
     and as value the total number of files of this type.
     """
     count = {}
-    for ext in dataframe[column_name].unique():
-        count[ext] = dataframe[dataframe[column_name] == ext].shape[0]
+    for ext in dataframe[extension_column_name].unique():
+        count[ext] = dataframe[dataframe[extension_column_name] == ext].shape[0]
     return count
 
 
@@ -43,8 +28,8 @@ def get_total_size_by_extension(dataframe):
     and as value the total size this type of file occupies in bytes.
     """
     total_size = {}
-    for ext in dataframe[column_name].unique():
-        all_files_by_ext = dataframe[dataframe[column_name] == ext]
+    for ext in dataframe[extension_column_name].unique():
+        all_files_by_ext = dataframe[dataframe[extension_column_name] == ext]
         total_size[ext] = all_files_by_ext['size'].sum()
     return total_size
 
@@ -130,6 +115,7 @@ if args.pie_threshold:
 else:
     pie_threshold = 1.0  # 1%
 
+
 if __name__ == '__main__':
     # Import df
     df = pd.read_parquet(file)
@@ -140,7 +126,6 @@ if __name__ == '__main__':
     # 2. size
     #   - The file's size, in bytes
 
-    df[column_name] = df['path'].apply(get_extension)
     sizes = sort_dict(get_total_size_by_extension(df))
     if pie:
         pie_chart(sizes, pie_threshold)
