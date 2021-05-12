@@ -16,15 +16,6 @@ from time import sleep, time, strftime, gmtime
 import round_robin as rr
 
 
-# The path of the directory to scan.
-root_directory: str = os.getcwd()
-
-# How many instances we want to store.
-max_trace: int = 30
-
-# Delay between each parse, in seconds.
-delay_between_two: int = 60 * 60 * 24
-
 # Type hint of the structure to store.
 # An instance contains a tuple with
 # (1) the timestamp of the transaction (UNIX seconds)
