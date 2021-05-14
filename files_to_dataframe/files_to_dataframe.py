@@ -16,6 +16,9 @@ from time import time
 
 class FilesToDataFrame:
 
+    # Files under this size (in bytes) will not be registered.
+    file_size_threshold = 1024
+
     def __init__(self, directory: str, mem_limit: int):
         self.directory = directory
         self.mem_limit = mem_limit
@@ -24,8 +27,6 @@ class FilesToDataFrame:
         # temporary dataframes to limit memory usage.
         self.temp_dir = os.path.join(os.getcwd(), 'ftd_temp')
         os.mkdir(self.temp_dir)  # If this raises FileExistsError, delete temp dir
-
-        tracemalloc.start()
 
     @staticmethod
     def clean_path(p: str) -> str:
@@ -40,20 +41,22 @@ class FilesToDataFrame:
         p = '_'.join(p_parts)
         return p
 
-    def _write_temp_df(self, data: list) -> None:
+    def _write_temp_df(self, data: dict) -> None:
         """
         Write a new temporary dataframe.
         """
         index = len(os.listdir(self.temp_dir))
         path = os.path.join(self.temp_dir, f'{index}.tmpdf')
-        pd.DataFrame.from_dict(data).to_parquet(path)
+        df = pd.DataFrame.from_dict(data)
+        df.to_parquet(path)
+        del index, path, df
 
     def _walk(self) -> None:
         """
         Walk `directory` recursively,
         and store the results in temporary files on the disk.
         """
-        info = []
+        info = {'path': [], 'size': []}
         for subdir, dirs, files in os.walk(self.directory):
             current_usage, _ = tracemalloc.get_traced_memory()
             if current_usage > self.mem_limit:
@@ -61,16 +64,21 @@ class FilesToDataFrame:
                 # cast the dictionary to a DataFrame and reset the former,
                 # freeing some space.
                 self._write_temp_df(info)
-                info = []
+                del info
+                info = {'path': [], 'size': []}
             for file in files:
                 file_path = os.path.join(subdir, file)
                 try:
-                    info.append({
-                        'path': file_path,
-                        'size': os.path.getsize(file_path)
-                    })
-                except (PermissionError, FileNotFoundError):
+                    file_size = os.path.getsize(file_path)
+                except (PermissionError, FileNotFoundError, OSError):
                     continue
+
+                if file_size > self.file_size_threshold:
+                    info['path'].append(file_path)
+                    info['size'].append(file_size)
+                del file_size, file_path
+
+        del subdir, dirs, files
 
         self._write_temp_df(info)
 
@@ -84,19 +92,24 @@ class FilesToDataFrame:
         # and remove them along the way.
         for stored_df in os.listdir(self.temp_dir):
             path = os.path.join(self.temp_dir, stored_df)
-            dataframes.append(pd.read_parquet(path))
+            new_df = pd.read_parquet(path)
+            dataframes.append(new_df)
             os.remove(path)
+        del path, new_df
         # Finally, remove the temp directory
         os.rmdir(self.temp_dir)
         # And concatenate all the dataframes
         df = pd.concat(objs=dataframes)
+        del dataframes
         return df
 
     def store_final_df(self, df: pd.DataFrame) -> None:
         # Requires pyarrow or fastparquet, install with pip
-        df.to_parquet(self.clean_path(self.directory) + '_persistent.df')
+        path = self.clean_path(self.directory) + '_persistent.df'
+        df.to_parquet(path)
 
     def run(self):
+        tracemalloc.start()
         t0 = time()
 
         self._walk()
@@ -105,7 +118,6 @@ class FilesToDataFrame:
 
         # Get stats
         current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
         parsing_time = time() - t0
         memory_usage = df.memory_usage(index=True).sum()
 
@@ -117,6 +129,9 @@ class FilesToDataFrame:
               f'df_mem={memory_usage:.3f}MB, all_mem={peak:.3f}MB')
 
         self.store_final_df(df)
+        del df
+
+        tracemalloc.stop()
 
 
 ###############
