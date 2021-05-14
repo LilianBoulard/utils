@@ -14,6 +14,13 @@ import pandas as pd
 from time import time
 
 
+fastparquet_kwargs = {
+    'engine': 'fastparquet',
+    'compression': 'gzip',
+    'row_group_offsets': 5000000
+}
+
+
 class FilesToDataFrame:
 
     # Files under this size (in bytes) will not be registered.
@@ -49,7 +56,6 @@ class FilesToDataFrame:
         path = os.path.join(self.temp_dir, f'{index}.tmpdf')
         df = pd.DataFrame.from_dict(data)
         df.to_parquet(path)
-        del index, path, df
 
     def _walk(self) -> None:
         """
@@ -64,7 +70,6 @@ class FilesToDataFrame:
                 # cast the dictionary to a DataFrame and reset the former,
                 # freeing some space.
                 self._write_temp_df(info)
-                del info
                 info = {'path': [], 'size': []}
             for file in files:
                 file_path = os.path.join(subdir, file)
@@ -76,9 +81,6 @@ class FilesToDataFrame:
                 if file_size > self.file_size_threshold:
                     info['path'].append(file_path)
                     info['size'].append(file_size)
-                del file_size, file_path
-
-        del subdir, dirs, files
 
         self._write_temp_df(info)
 
@@ -95,41 +97,57 @@ class FilesToDataFrame:
             new_df = pd.read_parquet(path)
             dataframes.append(new_df)
             os.remove(path)
-        del path, new_df
         # Finally, remove the temp directory
         os.rmdir(self.temp_dir)
         # And concatenate all the dataframes
         df = pd.concat(objs=dataframes)
-        del dataframes
         return df
 
     def store_final_df(self, df: pd.DataFrame) -> None:
-        # Requires pyarrow or fastparquet, install with pip
+        # Requires fastparquet, install with pip
         path = self.clean_path(self.directory) + '_persistent.df'
-        df.to_parquet(path)
+        df.to_parquet(path, **fastparquet_kwargs)
 
     def run(self):
         tracemalloc.start()
         t0 = time()
 
         self._walk()
+        t1 = time()
+        _, walk_peak = tracemalloc.get_traced_memory()
+        walk_peak /= (1024 ** 2)
+        parsing_time = t1 - t0
+        print(f'Parsing stats: '
+              f'duration={parsing_time:.3f}s, '
+              f'mem_peak={walk_peak:.3f}MB')
 
         df = self._df_from_temp()
-
-        # Get stats
-        current, peak = tracemalloc.get_traced_memory()
-        parsing_time = time() - t0
-        memory_usage = df.memory_usage(index=True).sum()
-
-        # Convert memory usages to megabytes
-        peak /= (1024 ** 2)
-        memory_usage /= (1024 ** 2)
-
-        print(f'rows={df.shape[0]}, duration={parsing_time:.3f}s, '
-              f'df_mem={memory_usage:.3f}MB, all_mem={peak:.3f}MB')
+        t2 = time()
+        _, pp_peak = tracemalloc.get_traced_memory()
+        df_mem_usage = df.memory_usage(index=True).sum()
+        pp_peak /= (1024 ** 2)
+        df_mem_usage /= (1024 ** 2)
+        post_process_time = t2 - t1
+        print(f'Post-processing stats: '
+              f'duration={post_process_time:.3f}s, '
+              f'mem_peak={pp_peak:.3f}MB, '
+              f'rows={df.shape[0]}, '
+              f'df_mem={df_mem_usage:.3f}MB')
 
         self.store_final_df(df)
-        del df
+        t3 = time()
+        _, store_peak = tracemalloc.get_traced_memory()
+        store_peak /= (1024 ** 2)
+        store_time = t3 - t2
+        print(f'Parsing stats: '
+              f'duration={store_time:.3f}s, '
+              f'mem_peak={store_peak:.3f}MB')
+
+        _, total_peak = tracemalloc.get_traced_memory()
+        total_peak /= (1024 ** 2)
+        print(f'Total stats: '
+              f'duration={time() - t0:.3f}s, '
+              f'peak={total_peak:.3f}MB')
 
         tracemalloc.stop()
 
