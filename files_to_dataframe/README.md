@@ -2,11 +2,11 @@
 
 These scripts are designed to store files' information in a pandas DataFrame for further processing.  
 Currently, two columns are created:
-1. ``path`` - the absolute path of the file
-2. ``size`` - the size of this file in bytes
+- ``path`` - the absolute path of the file
+- ``size`` - the size of this file in bytes
 
 One more is created after running ``post-processing.py``:
-3. ``extension`` - the extension of the file
+- ``extension`` - the extension of the file
 
 ## Usage
 
