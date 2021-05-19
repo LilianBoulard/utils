@@ -8,10 +8,12 @@ This file can later be used for disk usage analytics.
 import os
 import re
 import argparse
+import fastparquet  # Only to raise error if not installed.
 import tracemalloc
 import pandas as pd
 
 from time import time
+from pathlib import Path
 
 
 fastparquet_kwargs = {
@@ -26,20 +28,19 @@ class FilesToDataFrame:
     # Files under this size (in bytes) will not be registered.
     file_size_threshold = 1024
 
-    def __init__(self, directory: str, mem_limit: int):
+    def __init__(self, directory: Path, mem_limit: int):
         self.directory = directory
         self.mem_limit = mem_limit
 
         # Temporary directory in which we will store the
         # temporary dataframes to limit memory usage.
-        self.temp_dir = os.path.join(os.getcwd(), 'ftd_temp')
-        os.mkdir(self.temp_dir)  # If this raises FileExistsError, delete temp dir
+        self.temp_dir = Path.cwd() / 'ftd_temp'
+        self.temp_dir.mkdir()  # If this raises FileExistsError, delete temp dir
 
     @staticmethod
-    def clean_path(p: str) -> str:
-        p = os.path.abspath(p)
+    def clean_path(p: Path) -> str:
         # Divide parts
-        p_parts = p.split(os.sep)
+        p_parts = str(p).split(os.sep)
         # Clean parts
         p_parts = [re.sub('[^A-Za-z0-9]+', '', part) for part in p_parts]
         # Remove empties
@@ -52,8 +53,8 @@ class FilesToDataFrame:
         """
         Write a new temporary dataframe.
         """
-        index = len(os.listdir(self.temp_dir))
-        path = os.path.join(self.temp_dir, f'{index}.tmpdf')
+        index = len(list(self.temp_dir.iterdir()))
+        path = Path(self.temp_dir, f'{index}.tmpdf')
         df = pd.DataFrame.from_dict(data)
         df.to_parquet(path)
 
@@ -72,14 +73,14 @@ class FilesToDataFrame:
                 self._write_temp_df(info)
                 info = {'path': [], 'size': []}
             for file in files:
-                file_path = os.path.join(subdir, file)
+                file_path = Path(subdir, file)
                 try:
-                    file_size = os.path.getsize(file_path)
+                    file_size = file_path.stat().st_size
                 except (PermissionError, FileNotFoundError, OSError):
                     continue
 
                 if file_size > self.file_size_threshold:
-                    info['path'].append(file_path)
+                    info['path'].append(str(file_path))
                     info['size'].append(file_size)
 
         self._write_temp_df(info)
@@ -92,21 +93,20 @@ class FilesToDataFrame:
         dataframes = []
         # Read the temporary dataframes from the disk,
         # and remove them along the way.
-        for stored_df in os.listdir(self.temp_dir):
-            path = os.path.join(self.temp_dir, stored_df)
-            new_df = pd.read_parquet(path)
+        for stored_df in self.temp_dir.iterdir():
+            new_df = pd.read_parquet(stored_df)
             dataframes.append(new_df)
-            os.remove(path)
+            stored_df.unlink()
         # Finally, remove the temp directory
-        os.rmdir(self.temp_dir)
+        self.temp_dir.rmdir()
         # And concatenate all the dataframes
         df = pd.concat(objs=dataframes)
         return df
 
     def store_final_df(self, df: pd.DataFrame) -> None:
         # Requires fastparquet, install with pip
-        path = self.clean_path(self.directory) + '_persistent.df'
-        df.to_parquet(path, **fastparquet_kwargs)
+        name = self.clean_path(self.directory) + '_persistent.df'
+        df.to_parquet(name, **fastparquet_kwargs)
 
     def run(self):
         tracemalloc.start()
@@ -174,7 +174,7 @@ parser.add_argument("-l", "--limit",
 
 args = parser.parse_args()
 
-root_directory = args.directory[0]
+root_directory = Path(args.directory[0]).resolve()
 
 if args.limit:
     limit = args.limit[0]
