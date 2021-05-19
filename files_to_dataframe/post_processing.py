@@ -8,12 +8,21 @@ import argparse
 import pandas as pd
 
 
+fastparquet_kwargs = {
+    'engine': 'fastparquet',
+    'compression': 'gzip',
+    'row_group_offsets': 5000000
+}
+
+
 def read_df(file_path: str) -> pd.DataFrame:
-    return pd.read_parquet(file_path)
+    print('Reading file')
+    return pd.read_parquet(file_path, **fastparquet_kwargs)
 
 
 def write_df(file_path: str, df: pd.DataFrame) -> None:
-    df.to_parquet(file_path)
+    print('Writing file')
+    df.to_parquet(file_path, **fastparquet_kwargs)
 
 
 def extract_extension(df: pd.DataFrame) -> pd.DataFrame:

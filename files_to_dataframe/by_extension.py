@@ -98,7 +98,7 @@ parser.add_argument("--pie-threshold",
                          "It is a percentage expressed between 0.0 and 100.0. "
                          "All values representing less than this "
                          "percentage of the total will be aggregated together. "
-                         "Default is 1.0 (1%).",
+                         "Default is 1.0, which is 1 percent.",
                     type=float, nargs=1)
 
 args = parser.parse_args()
@@ -125,6 +125,8 @@ if __name__ == '__main__':
     #   - The full path of the file
     # 2. size
     #   - The file's size, in bytes
+    # 3. extension
+    #   - The file's extension, empty if it does not have one
 
     sizes = sort_dict(get_total_size_by_extension(df))
     if pie:
