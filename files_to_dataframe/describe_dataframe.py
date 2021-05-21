@@ -1,6 +1,11 @@
 import argparse
 import pandas as pd
 
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
+
 
 parser = argparse.ArgumentParser(
     "Used to gain some insight on a DataFrame's content."
@@ -23,6 +28,7 @@ def read_df(file_path: str) -> pd.DataFrame:
 def describe(df: pd.DataFrame):
     print(df.describe())
     print(df.head())
+    print(df.nunique())
 
 
 if __name__ == "__main__":
