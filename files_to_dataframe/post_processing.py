@@ -7,6 +7,8 @@ import os
 import argparse
 import pandas as pd
 
+from time import time
+
 
 fastparquet_kwargs = {
     'engine': 'fastparquet',
@@ -17,12 +19,31 @@ fastparquet_kwargs = {
 
 def read_df(file_path: str) -> pd.DataFrame:
     print('Reading file')
-    return pd.read_parquet(file_path, **fastparquet_kwargs)
+    t = time()
+    r = pd.read_parquet(file_path)
+    print('Took {:.3f}s'.format(time() - t))
+    return r
 
 
 def write_df(file_path: str, df: pd.DataFrame) -> None:
     print('Writing file')
+    t = time()
     df.to_parquet(file_path, **fastparquet_kwargs)
+    print('Took {:.3f}s'.format(time() - t))
+
+
+def extract_gz(file_parts: list) -> str:
+    """
+    Tries to extract the "true" extension of the gz, as it's usually in two parts,
+    e.g. tar.gz
+    """
+    # If we have at least three parts : "<file name>.<first_ext_member>.gz"
+    if len(file_parts) >= 3:
+        # Join the last two parts
+        ext = '.'.join(file_parts[-2:])
+    else:
+        ext = file_parts[-1]
+    return ext
 
 
 def extract_extension(df: pd.DataFrame) -> pd.DataFrame:
@@ -31,6 +52,7 @@ def extract_extension(df: pd.DataFrame) -> pd.DataFrame:
     """
 
     print('Extracting extensions')
+    t = time()
 
     def get_extension(path) -> str:
         file_name: str = path.split(os.sep)[-1]
@@ -41,11 +63,16 @@ def extract_extension(df: pd.DataFrame) -> pd.DataFrame:
 
         file_parts = file_name.split('.')
         if len(file_parts) > 1:
-            return file_parts[-1].lower()
+            ext = file_parts[-1].lower()
+            if ext == 'gz':
+                ext = extract_gz(file_parts)
+            return ext
         # If the file contains no dots, return empty
         return ''
 
     df['extension'] = df['path'].apply(get_extension)
+
+    print('Took {:.3f}s'.format(time() - t))
 
     return df
 
