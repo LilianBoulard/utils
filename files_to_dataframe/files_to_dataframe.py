@@ -56,7 +56,7 @@ class FilesToDataFrame:
         index = len(list(self.temp_dir.iterdir()))
         path = Path(self.temp_dir, f'{index}.tmpdf')
         df = pd.DataFrame.from_dict(data)
-        df.to_parquet(path)
+        df.to_parquet(path, **fastparquet_kwargs)
 
     def _walk(self) -> None:
         """
@@ -111,7 +111,7 @@ class FilesToDataFrame:
         # Read the temporary dataframes from the disk,
         # and remove them along the way.
         for stored_df in self.temp_dir.iterdir():
-            new_df = pd.read_parquet(stored_df)
+            new_df = pd.read_parquet(stored_df, engine='fastparquet')
             dataframes.append(new_df)
             stored_df.unlink()
         # Finally, remove the temp directory
