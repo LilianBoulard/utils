@@ -63,7 +63,17 @@ class FilesToDataFrame:
         Walk `directory` recursively,
         and store the results in temporary files on the disk.
         """
-        info = {'path': [], 'size': []}
+
+        def get_default_dict() -> dict:
+            return {
+                'path': [],
+                'size': [],
+                'uid': [],
+                'atime': [],
+                'mtime': [],
+            }
+
+        info = get_default_dict()
         for subdir, dirs, files in os.walk(self.directory):
             current_usage, _ = tracemalloc.get_traced_memory()
             if current_usage > self.mem_limit:
@@ -71,17 +81,24 @@ class FilesToDataFrame:
                 # cast the dictionary to a DataFrame and reset the former,
                 # freeing some space.
                 self._write_temp_df(info)
-                info = {'path': [], 'size': []}
+                info = get_default_dict()
             for file in files:
                 file_path = Path(subdir, file)
                 try:
-                    file_size = file_path.stat().st_size
+                    file_stat = file_path.stat()
                 except (PermissionError, FileNotFoundError, OSError):
                     continue
 
+                file_owner = file_stat.st_uid
+                file_last_access = file_stat.st_atime
+                file_last_mod = file_stat.st_mtime
+                file_size = file_stat.st_size
                 if file_size > self.file_size_threshold:
                     info['path'].append(str(file_path))
                     info['size'].append(file_size)
+                    info['uid'].append(file_owner)
+                    info['atime'].append(file_last_access)
+                    info['mtime'].append(file_last_mod)
 
         self._write_temp_df(info)
 
