@@ -1,3 +1,5 @@
+*Original sources at https://github.com/LilianBoulard/utils/tree/main/files_to_dataframe*
+
 # Files-to-DataFrame (FTD)
 
 A set of scripts designed to store files' information in a pandas DataFrame and post-process that output.  
@@ -22,7 +24,8 @@ To get the available parameters and their description.
 
 ## Files
 
-1. ``files_to_dataframe.py`` parses the directory and constructs the DataFrame, storing it locally afterwards.
+1. ``files_to_dataframe.py`` parses the directory and constructs the DataFrame, storing it locally afterwards.  
+   *Note on naming conventions: The dataframe is stored as `<formatted_path>_persistent.df`*
 2. ``post_processing.py`` extracts interesting features from the DataFrame, and adds them as new columns.
 
 One more column is created upon running ``post_processing.py``:
