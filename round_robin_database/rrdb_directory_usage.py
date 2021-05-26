@@ -72,7 +72,10 @@ class DirectoryUsage:
             # Add files' sizes.
             for f in files:
                 file_path = os.path.join(root, f)
-                total_size += os.path.getsize(file_path)
+                try:
+                    total_size += os.path.getsize(file_path)
+                except (FileNotFoundError, PermissionError, OSError):
+                    continue
             # Calls itself recursively to add subdirectories' sizes.
             for d in dirs:
                 dir_path = os.path.join(root, d)
