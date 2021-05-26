@@ -41,4 +41,4 @@ else:
 
 
 if __name__ == "__main__":
-    print(get_files_count_by_dir())
+    print(f'{get_files_count_by_dir()} files found in {directory!r}')
