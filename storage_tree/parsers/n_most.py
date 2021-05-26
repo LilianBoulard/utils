@@ -7,13 +7,13 @@ from typing import List, Tuple
 class Parser(BaseParser):
 
     """
-    Used to parse the output of PyDU.
+    Used to parse the output of n_most.
     Example of expected input:
 
     ```
-    ('/path/to/file1', 1024)
-    ('/path/to/file2', 10241024)
     ('/path/to/file3', 102410241024)
+    ('/path/to/file2', 10241024)
+    ('/path/to/file1', 1024)
     ```
 
     """
