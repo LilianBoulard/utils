@@ -1,8 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import os
-import sys
 import logging
 import platform
 import argparse
@@ -76,7 +72,7 @@ class DiskUsage:
     def return_results(self, human_readable: bool) -> List[Tuple[str, int]] or List[Tuple[str, str]]:
         """
         :param bool human_readable: Whether to convert the sizes in human-readable format.
-        :return list: The disk usage result.
+        :return list: The list of heaviest files.
         """
         if human_readable:
             units = ["B", "KB", "MB", "GB", "TB"]
@@ -98,7 +94,7 @@ class DiskUsage:
         """
         Inserts a new value in a sorted list.
         Instead of calling the builtin function ``sort()`` which is very slow,
-        we iterate the ``du`` list and we add the tuple at the right place.
+        we add the new value linearly.
         The first item of the list is the heaviest file.
 
         :param Tuple[str, int] value: A tuple containing the name of the file, and its size in bytes.
@@ -177,22 +173,27 @@ class DiskUsage:
 # ARGS PARSER #
 ###############
 
-parser = argparse.ArgumentParser("A disk usage utility in Python3.")
+parser = argparse.ArgumentParser("A small Python3 utility used to list the heaviest files of a directory.")
 
 parser.add_argument("-r", "--root",
-                    help="Directory to scan recursively. Must be an absolute path.",
+                    help="Directory to scan recursively. "
+                         "Must be an absolute path.",
                     type=str, nargs=1)
 parser.add_argument("-l", "--logs",
                     help="Absolute path to the directory where log files will be stored.",
                     type=str, nargs=1)
 parser.add_argument("-n",
-                    help="How many files do we want reported at most. Default is 50.",
+                    help="How many files do we want reported at most. "
+                         "Default is 50.",
                     type=int, nargs=1)
-parser.add_argument("-t", "--threshold",
-                    help="A size in bytes. Files under this threshold will not be reported. Default is 0.",
+parser.add_argument("-t", "--thre",
+                    help="A size in bytes. "
+                         "Files under this threshold will not be reported. "
+                         "Default is 0.",
                     type=int, nargs=1)
 parser.add_argument("-hr", "--human-readable",
-                    help="Converts the files sizes to human-readable format. False by default, specify for True.",
+                    help="Converts the files sizes to human-readable format. "
+                         "False by default, specify for True.",
                     action="store_true")
 
 cl_args = parser.parse_args()
@@ -223,9 +224,9 @@ else:
     threshold = 0
 
 
-########
-# LOGS #
-########
+###########
+# LOGGING #
+###########
 
 logging_level = logging.INFO
 
@@ -275,7 +276,7 @@ if __name__ == "__main__":
         input("WARNING: This script has been designed for Linux. Press enter to proceed anyway...")
 
     du = DiskUsage(n, threshold)
-    logging.info(f"Launching Disk Usage scan on {root!r}")
+    logging.info(f"Launching scan on {root!r}")
     du.scan(root)
 
     results = du.return_results(human_readable=human_readable)
