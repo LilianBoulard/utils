@@ -40,4 +40,5 @@ else:
     count_dirs = False
 
 
-print(get_files_count_by_dir())
+if __name__ == "__main__":
+    print(get_files_count_by_dir())
