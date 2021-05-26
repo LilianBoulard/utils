@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import storage_tree
+from .base import BaseView, human_readable_bytes
 
 
-class View:
+class View(BaseView):
 
     @staticmethod
     def std_repr(obj):
@@ -28,7 +28,7 @@ class View:
         :param StorageTreeFile obj:
         :return str:
         """
-        r = f"<li>{obj.name} | {storage_tree.human_readable_bytes(obj.size)}</li>"
+        r = f"<li>{obj.name} | {human_readable_bytes(obj.size)}</li>"
         return r
 
     @staticmethod
@@ -43,9 +43,3 @@ class View:
         r += "</body>"
         r += "</html>"
         return r
-
-
-if __name__ == "__main__":
-    st = storage_tree.StorageTree(storage_tree.pydu_result_file, view=View)
-    st.run()
-    print(st)
