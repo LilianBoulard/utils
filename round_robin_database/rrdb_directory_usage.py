@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
 from math import floor
+from datetime import datetime
 from typing import List, Tuple, Dict
 from time import sleep, time, strftime, gmtime
 
@@ -113,10 +114,20 @@ class DirectoryUsage:
         """
         Runs the parser once.
         """
-        self.rr.append(self.get_instance())
+        print(f'Parsing {self.root}')
+        t = time()
+        instance = self.get_instance()
+        print(f'Parsed {len(instance[1])} directories')
+        self.rr.append(instance)
+        print(f'Took {time() - t:.3f}s')
+
+        print('Writing database')
+        t = time()
         self.rr.write_to_disk()
+        print(f'Took {time() - t:.3f}s')
 
         if wait:
+            print(f'Waiting for {self.delay}s')
             self.wait()
 
     def run_for(self, num: int) -> None:
@@ -206,6 +217,7 @@ class DirectoryUsage:
         )
 
         plt.legend()
+        print('Showing dashboard')
         plt.show()
 
 
@@ -278,6 +290,7 @@ else:
 
 
 if __name__ == "__main__":
+    print(f'Launched on {datetime.now()}')
     du = DirectoryUsage(root=root_directory,
                         trace=instances,
                         delay=delay_between_two,
@@ -288,6 +301,8 @@ if __name__ == "__main__":
             du.run_forever()
         else:
             du.run_for(n)
+
+    print(f'Ended on {datetime.now()}')
 
     if dashboard:
         du.dashboard()
