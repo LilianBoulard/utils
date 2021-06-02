@@ -1,6 +1,7 @@
 import argparse
 
 from pathlib import Path
+from datetime import datetime
 
 import ftd
 
@@ -55,6 +56,8 @@ else:
 
 
 if __name__ == "__main__":
+
+    print(f'Launched on {datetime.now()}')
 
     if skip_parsing:
         _file = Path(_args.file[0])

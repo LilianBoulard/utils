@@ -1,6 +1,7 @@
 import argparse
 
 from pathlib import Path
+from datetime import datetime
 
 import ftd
 
@@ -39,6 +40,9 @@ if _args.save:
 else:
     _save = False
 
+if __name__ == "__main__":
 
-dashboard = ftd.Dashboard(_file, _load, _save)
-dashboard.dashboard()
+    print(f'Launched on {datetime.now()}')
+
+    dashboard = ftd.Dashboard(_file, _load, _save)
+    dashboard.dashboard()

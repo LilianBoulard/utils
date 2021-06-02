@@ -15,13 +15,13 @@ class Parser(BaseParser):
     df = pandas.DataFrame(
     {
         'path': [
-            '/path/to/file1',
             '/path/to/file2',
+            '/path/to/file1',
             '/path/to/file3'
         ],
         'size': [
-            1024,
             10241024,
+            1024,
             102410241024
         ]
     })

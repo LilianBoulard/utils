@@ -32,19 +32,19 @@ class Dashboard:
 
     def dashboard(self):
         """
-        Main method.
-        Displays all the graphs
+        Displays all the graphs in a subplot.
         """
         fig, axes = plt.subplots(1, 2)
         self._user_pie_chart(axes[0], standalone=False)
         self._extension_histogram(axes[1], standalone=False)
         plt.show()
 
-    def _user_pie_chart(self, ax=None, standalone: bool = False, n_users: int = 10) -> None:
+    def _user_pie_chart(self, ax=None, standalone: bool = True, n_users: int = 10) -> None:
         """
-        Displays a pie chart showing which `n` users are using the most space.
+        Displays a pie chart showing which `n` users are using the most space (via file ownership).
 
-        :param ax: Matplotlib axis.
+        :param ax: Optional. Matplotlib axis. If not passed, use `standalone=True`.
+        :param bool standalone: Whether the pie should be displayed in a standalone window.
         :param int n_users: The number of users to show at most.
         """
 
@@ -78,6 +78,14 @@ class Dashboard:
             plt.show()
 
     def _extension_histogram(self, ax=None, standalone: bool = True, n_ext: int = 5) -> None:
+        """
+        Displays an histogram which shows the `n` extensions that uses the most space,
+        split among different time ranges (defined by `ftd.manipulators.ByDateManipulator._ranges`).
+
+        :param ax: Optional. Matplotlib axis. If not passed, use `standalone=True`.
+        :param bool standalone: Whether the pie should be displayed in a standalone window.
+        :param int n_ext: The number of extensions to show at most.
+        """
 
         if standalone:
             fig, ax = plt.figure(8, 9)
