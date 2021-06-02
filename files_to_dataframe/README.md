@@ -13,25 +13,24 @@ Upon running, five columns are created:
 - ``atime`` - UNIX timestamp of the last access to the content
 - ``mtime`` - UNIX timestamp of the last modification of the content
 
+and two more are added during post-processing:
+- ``extension`` - the extension of the file
+- ``username`` - the readable username correlated to the `uid`
+
 ## Usage
 
-All the files can be used with the same format:  
-Launch
+There are two main scripts:
+- ``parse_and_post_process.py`` which parses a directory, and post-processes the output.
+- ``stats.py`` which is used for later analytics
+
+To get the available parameters and their documentation, launch
 
     python3 <script>.py -h
 
-To get the available parameters and their description.
 
-## Files
+Two more columns are created upon running ``post_processing.py``:
 
-1. ``files_to_dataframe.py`` parses the directory and constructs the DataFrame, storing it locally afterwards.  
-   *Note on naming conventions: The dataframe is stored as `<formatted_path>_persistent.df`*
-2. ``post_processing.py`` extracts interesting features from the DataFrame, and adds them as new columns.
-
-One more column is created upon running ``post_processing.py``:
-- ``extension`` - the extension of the file.
 
 ### Optional
 
-- ``by_extension.py`` contains utilities to manipulate the files' information based on their extension.
-- ``describe_dataframe.py`` can be used to describe a DataFrame and gain some insights on its content.
+- ``ftd/describe_dataframe.py`` can be used to describe a DataFrame and gain some insights on its content.

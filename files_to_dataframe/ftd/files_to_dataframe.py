@@ -1,26 +1,20 @@
 """
 Python3 utility used to parse a directory recursively,
-and store all files info it finds in a pandas DataFrame,
+and store all files info in a pandas DataFrame,
 which is then stored as Apache Parquet.
 This file can later be used for disk usage analytics.
 """
 
 import os
 import re
-import argparse
-import fastparquet  # Only to raise error if not installed.
+import fastparquet  # Only here to raise error if not installed.
 import tracemalloc
 import pandas as pd
 
 from time import time
 from pathlib import Path
 
-
-fastparquet_kwargs = {
-    'engine': 'fastparquet',
-    'compression': 'gzip',
-    'row_group_offsets': 5000000
-}
+from .utils import write_dataframe, read_dataframe
 
 
 class FilesToDataFrame:
@@ -36,6 +30,8 @@ class FilesToDataFrame:
         # temporary dataframes to limit memory usage.
         self.temp_dir = Path.cwd() / 'ftd_temp'
         self.temp_dir.mkdir()  # If this raises FileExistsError, delete temp dir
+
+        self.run()
 
     @staticmethod
     def clean_path(p: Path) -> str:
@@ -56,7 +52,7 @@ class FilesToDataFrame:
         index = len(list(self.temp_dir.iterdir()))
         path = Path(self.temp_dir, f'{index}.tmpdf')
         df = pd.DataFrame.from_dict(data)
-        df.to_parquet(path, **fastparquet_kwargs)
+        write_dataframe(path, df)
 
     def _walk(self) -> None:
         """
@@ -110,20 +106,23 @@ class FilesToDataFrame:
         dataframes = []
         # Read the temporary dataframes from the disk,
         # and remove them along the way.
-        for stored_df in self.temp_dir.iterdir():
-            new_df = pd.read_parquet(stored_df, engine='fastparquet')
+        for stored_df_path in self.temp_dir.iterdir():
+            new_df = read_dataframe(stored_df_path)
             dataframes.append(new_df)
-            stored_df.unlink()
+            stored_df_path.unlink()
         # Finally, remove the temp directory
         self.temp_dir.rmdir()
         # And concatenate all the dataframes
         df = pd.concat(objs=dataframes)
         return df
 
-    def store_final_df(self, df: pd.DataFrame) -> None:
-        # Requires fastparquet, install with pip
+    def get_final_df_path(self) -> Path:
         name = self.clean_path(self.directory) + '_persistent.df'
-        df.to_parquet(name, **fastparquet_kwargs)
+        return Path('./', name).resolve()
+
+    def store_final_df(self, df: pd.DataFrame) -> None:
+        path = self.get_final_df_path()
+        write_dataframe(path, df)
 
     def run(self):
         tracemalloc.start()
@@ -167,38 +166,3 @@ class FilesToDataFrame:
               f'peak={total_peak:.3f}MB')
 
         tracemalloc.stop()
-
-
-###############
-# ARGS PARSER #
-###############
-
-parser = argparse.ArgumentParser(
-    "Python3 utility used to parse a directory recursively, "
-    "and store all files info it finds in a pandas DataFrame, "
-    "which is then stored as Apache Parquet. "
-    "This file can later be used for disk usage analytics."
-)
-
-parser.add_argument("-d", "--directory",
-                    help="Directory to scan recursively. "
-                         "Must be an absolute path.",
-                    type=str, nargs=1, required=True)
-parser.add_argument("-l", "--limit",
-                    help="Memory usage limit, in bytes. "
-                         "Default is 2147483648 (2GB)",
-                    type=int, nargs=1, required=False)
-
-args = parser.parse_args()
-
-root_directory = Path(args.directory[0]).resolve()
-
-if args.limit:
-    limit = args.limit[0]
-else:
-    limit = 2 * 1024 * 1024 * 1024
-
-
-if __name__ == "__main__":
-    ftdf = FilesToDataFrame(directory=root_directory, mem_limit=limit)
-    ftdf.run()

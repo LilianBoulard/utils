@@ -22,7 +22,7 @@ file = args.file[0]
 
 
 def read_df(file_path: str) -> pd.DataFrame:
-    return pd.read_parquet(file_path)
+    return pd.read_parquet(file_path, engine='fastparquet')
 
 
 def describe(df: pd.DataFrame):
