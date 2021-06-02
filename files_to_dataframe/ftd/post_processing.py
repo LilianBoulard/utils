@@ -81,7 +81,12 @@ class PostProcessor:
         """
 
         def get_username_by_uid(uid: int) -> str:
-            return pwd.getpwuid(uid).pw_name
+            try:
+                name = pwd.getpwuid(uid).pw_name
+            except KeyError:
+                # uid not found
+                name = ''
+            return name
 
         self.df['username'] = self.df['uid'].apply(get_username_by_uid)
 

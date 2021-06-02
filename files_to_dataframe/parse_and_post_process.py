@@ -57,7 +57,7 @@ else:
 if __name__ == "__main__":
 
     if skip_parsing:
-        _file = _args.file[0]
+        _file = Path(_args.file[0])
     else:
         _file = ftd.FilesToDataFrame(directory=_root_directory, mem_limit=_mem_limit).get_final_df_path()
 
