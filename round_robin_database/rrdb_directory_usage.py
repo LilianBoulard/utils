@@ -222,7 +222,7 @@ parser = argparse.ArgumentParser(
     "of a directory per subdirectory over time."
 )
 
-parser.add_argument("-r", "--root",
+parser.add_argument("-d", "--directory",
                     help="Directory to scan recursively. "
                          "Must be an absolute path.",
                     type=str, nargs=1)
@@ -230,7 +230,7 @@ parser.add_argument("-f", "--file",
                     help="The path of the file in which "
                          "we will store the results.",
                     type=str, nargs=1)
-parser.add_argument("-d", "--delay",
+parser.add_argument("-o", "--occurrence",
                     help="Delay in seconds to apply between each parsing. "
                          "Default is 24 hours.",
                     type=int, nargs=1)
@@ -238,7 +238,7 @@ parser.add_argument("-i", "--instances",
                     help="How many instances we want reported at most. "
                          "Default is 30.",
                     type=int, nargs=1)
-parser.add_argument("--run",
+parser.add_argument("-r", "--run",
                     help="Optional. Run for n times. "
                          "Specify 0 to run indefinitely.",
                     type=int, nargs=1)
@@ -250,8 +250,8 @@ parser.add_argument("--dashboard",
 
 args = parser.parse_args()
 
-if args.root:
-    root_directory = args.root[0]
+if args.directory:
+    root_directory = args.directory[0]
 else:
     root_directory = os.getcwd()  # Current directory
 
@@ -260,8 +260,8 @@ if args.file:
 else:
     output_file = 'du.db'  # In the current directory
 
-if args.delay:
-    delay_between_two = args.delay[0]
+if args.occurrence:
+    delay_between_two = args.occurrence[0]
 else:
     delay_between_two = 60 * 60 * 24
 
