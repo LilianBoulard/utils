@@ -73,7 +73,11 @@ class DirectoryUsage:
                 fp = os.path.join(root, f)
                 # Skip symbolic links
                 if not os.path.islink(fp):
-                    total_size += os.path.getsize(fp)
+                    try:
+                        total_size += os.path.getsize(fp)
+                    except (PermissionError, OSError, FileNotFoundError):
+                        pass
+
         return total_size
 
     def list_directories(self) -> List[str]:
