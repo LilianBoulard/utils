@@ -66,22 +66,14 @@ class DirectoryUsage:
     def get_directory_size(self, directory: str) -> int:
         """
         Recursive function used to get the size of a directory.
-        Isn't there a simpler method ?
         """
         total_size = 0
-        for root, dirs, files in os.walk(directory):
-            # Add files' sizes.
+        for root, subdirs, files in os.walk(directory):
             for f in files:
-                file_path = os.path.join(root, f)
-                try:
-                    total_size += os.path.getsize(file_path)
-                except (FileNotFoundError, PermissionError, OSError):
-                    continue
-            # Calls itself recursively to add subdirectories' sizes.
-            for d in dirs:
-                dir_path = os.path.join(root, d)
-                total_size += self.get_directory_size(dir_path)
-
+                fp = os.path.join(root, f)
+                # Skip symbolic links
+                if not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
         return total_size
 
     def list_directories(self) -> List[str]:
