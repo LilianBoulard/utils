@@ -88,11 +88,18 @@ class PostProcessor:
                 name = ''
             return name
 
-        self.df['username'] = self.df['uid'].apply(get_username_by_uid)
+        unique_uids = list(self.df['uid'].unique())
+        # Create a mapping
+        mapping = {
+            uid: get_username_by_uid(uid)
+            for uid in unique_uids
+        }
+        self.df['username'] = self.df['uid'].map(mapping)
 
     def post_process(self) -> None:
         """
         Runs the post-processing steps.
         """
         self.extract_extension()
-        self.extract_usernames_from_uids()
+        if platform == 'linux':
+            self.extract_usernames_from_uids()
