@@ -2,11 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from pathlib import Path
-
-from .manipulators import ByUserManipulator, ByExtensionManipulator, ByDateManipulator
-
-from .utils import read_dataframe
+from .analyzer import Analyzer
 
 
 class Dashboard:
@@ -20,15 +16,8 @@ class Dashboard:
         'EB',
     ]
 
-    def __init__(self, file: Path, load: bool = False, save: bool = False):
-        self._load = load
-        self._save = save
-
-        df = read_dataframe(file)
-
-        self.user_manipulator = ByUserManipulator(file, df, self._load, self._save)
-        self.date_manipulator = ByDateManipulator(file, df, self._load, self._save)
-        self.ext_manipulator = ByExtensionManipulator(file, df, self._load, self._save)
+    def __init__(self, analyzer: Analyzer):
+        self._analyzer = analyzer
 
     def dashboard(self):
         """
@@ -39,7 +28,7 @@ class Dashboard:
         self._extension_histogram(axes[1], standalone=False)
         plt.show()
 
-    def _user_pie_chart(self, ax=None, standalone: bool = True, n_users: int = 10) -> None:
+    def _user_pie_chart(self, ax=None, standalone: bool = True, n_users: int = 5) -> None:
         """
         Displays a pie chart showing which `n` users are using the most space (via file ownership).
 
@@ -66,18 +55,24 @@ class Dashboard:
         if standalone:
             fig, ax = plt.figure(8, 9)
 
-        user_content = self.user_manipulator.get_content()
+        user_content = self._analyzer.user_manipulator.get_content()
         counts = list(user_content.values())[:n_users]
         users = list(user_content.keys())[:n_users]
+        remaining_counts = list(user_content.values())[n_users:]
+        users[users.index('')] = 'Nobody'
+
+        # Congregate remaining counts and users, and add it to the list.
+        counts.append(sum(remaining_counts))
+        users.append('Other users')
 
         ax.pie(counts, labels=users, startangle=140,
                autopct=lambda pct: format_pct(pct, counts))
-        ax.set_title(f'Top {len(users)} users')
+        ax.set_title(f'Top {len(users) - 1} users')
 
         if standalone:
             plt.show()
 
-    def _extension_histogram(self, ax=None, standalone: bool = True, n_ext: int = 5) -> None:
+    def _extension_histogram(self, ax=None, standalone: bool = True, n_ext: int = 8) -> None:
         """
         Displays an histogram which shows the `n` extensions that uses the most space,
         split among different time ranges (defined by `ftd.manipulators.ByDateManipulator._ranges`).
@@ -90,8 +85,8 @@ class Dashboard:
         if standalone:
             fig, ax = plt.figure(8, 9)
 
-        date_content = self.date_manipulator.get_content()
-        ext_content = self.ext_manipulator.get_content()
+        date_content = self._analyzer.date_manipulator.get_content()
+        ext_content = self._analyzer.ext_manipulator.get_content()
 
         # Get the `n` heaviest extensions.
         # They are ordered from the heaviest to the lightest.
@@ -103,7 +98,7 @@ class Dashboard:
 
         data = {}
         for range_name, indices in tuple(date_content['atime'].items())[::-1]:
-            sizes = self.ext_manipulator.get_sizes_by_ext_and_date(top_ext, indices)
+            sizes = self._analyzer.ext_manipulator.get_sizes_by_ext_and_date(top_ext, indices)
             data.update({range_name: sizes})
 
         df = pd.DataFrame(data, index=labels)
