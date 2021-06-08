@@ -25,7 +25,7 @@ class BaseManipulator(ABC):
         so that we can load it later on.
     """
 
-    # Overwrite the following values in your class
+    # Overwrite the following values in your child class
 
     # Type hinting of the type of the content.
     # Use builtins and/or `typing` library.
@@ -43,6 +43,7 @@ class BaseManipulator(ABC):
 
         if load:
             self.content = self.load()
+            self.sort()
         else:
             self.content = self._compute()
             self.sort()
