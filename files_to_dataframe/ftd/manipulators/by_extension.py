@@ -1,10 +1,11 @@
+import numpy as np
 import pandas as pd
 
 from pathlib import Path
 from typing import Dict, List
 
 from .base import BaseManipulator
-from ..utils import log_duration, write_dataframe
+from ..utils import log_duration, write_dataframe, get_lists_intersection
 
 
 class ByExtensionManipulator(BaseManipulator):
@@ -55,6 +56,7 @@ class ByExtensionManipulator(BaseManipulator):
             # 'count': self._get_file_count_by_extension()
         }
 
+    @log_duration('Sorting extensions results')
     def sort(self) -> None:
         for column, d in self.content.items():
             # We'll skip the indices column
@@ -69,25 +71,20 @@ class ByExtensionManipulator(BaseManipulator):
                 )
             )
 
-    def _get_all_extensions(self) -> List[str]:
+    def _get_all_extensions(self) -> np.array:
         """
         Queries the DataFrame, and returns all the unique extensions found.
         """
-        return list(self.df[self.EXTENSION_COLUMN_NAME].unique())
-
-    def _get_indices_by_ext(self, ext: str) -> List[int]:
-        """
-        Queries the DataFrame, and returns a list of indices which correspond
-        to the lines where the file has the specified extension.
-        """
-        return list(self.df[self.df[self.EXTENSION_COLUMN_NAME] == ext].index)
+        return self.df[self.EXTENSION_COLUMN_NAME].unique()
 
     @log_duration('Getting indices by extension')
     def _get_all_extensions_indices(self) -> Dict[str, List[int]]:
-        return {
-            ext: self._get_indices_by_ext(ext)
-            for ext in self._get_all_extensions()
-        }
+        # Init the dictionary
+        all_ext = {ext: [] for ext in self._get_all_extensions()}
+        # Iter over the rows, adding the index on the fly.
+        for index, row in self.df.iterrows():
+            all_ext[row[self.EXTENSION_COLUMN_NAME]].append(index)
+        return all_ext
 
     @log_duration('Getting count by extension')
     def _get_file_count_by_extension(self) -> Dict[str, int]:
@@ -101,7 +98,7 @@ class ByExtensionManipulator(BaseManipulator):
         }
 
     def _get_size_by_index(self, index: pd.Index) -> int:
-        return self.df.iloc[index][self.SIZES_COLUMN_NAME].sum()
+        return self.df[self.SIZES_COLUMN_NAME].iloc[index].sum()
 
     @log_duration('Getting sizes by extension')
     def _get_total_size_by_extension(self) -> Dict[str, int]:
@@ -114,14 +111,21 @@ class ByExtensionManipulator(BaseManipulator):
             for ext, indices in self._indices.items()
         }
 
+    @log_duration('Getting sizes by date ranges')
+    def compute_sizes_by_ranges(self):
+        pass
+
     def get_sizes_by_ext_and_date(self, ext_list: List[str], date_range_indices: List[int]) -> List[int]:
-        date_range_index = pd.Int64Index(date_range_indices)
         data = []
         for ext in ext_list:
             ext_indices = self.content['indices'][ext]
-            ext_index = pd.Int64Index(ext_indices)
-            inter = ext_index.intersection(date_range_index)
-            size = self._get_size_by_index(inter)
+            # Note: we don't use `pandas.Index.intersection()`
+            # because it is extremely inefficient.
+            # One possible optimization would be to use numpy.intersect1d,
+            # but might not be worth it because of the array casting.
+            inter = get_lists_intersection(date_range_indices, ext_indices)
+            idx = pd.Index(inter)
+            size = self._get_size_by_index(idx)
             data.append(size)
         return data
 
