@@ -71,6 +71,9 @@ class PostProcessor:
             return ''
 
         self.df['extension'] = self.df['path'].apply(get_extension)
+        self.df.astype({
+            'extension': 'string'
+        })
 
     @log_duration('Extracting usernames')
     def extract_usernames_from_uids(self) -> None:
@@ -95,6 +98,9 @@ class PostProcessor:
             for uid in unique_uids
         }
         self.df['username'] = self.df['uid'].map(mapping)
+        self.df = self.df.astype({
+            'username': 'string'
+        })
 
     def post_process(self) -> None:
         """

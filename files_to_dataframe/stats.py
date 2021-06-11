@@ -13,8 +13,7 @@ _parser = argparse.ArgumentParser(
 )
 
 _parser.add_argument("-f", "--file",
-                     help="Directory to scan recursively. "
-                          "Must be an absolute path.",
+                     help="File containing the DataFrame to analyze.",
                      type=str, nargs=1, required=True)
 _parser.add_argument("--load",
                      help="Load the content of a previous run. "

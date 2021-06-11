@@ -14,7 +14,7 @@ import pandas as pd
 from time import time
 from pathlib import Path
 
-from .utils import write_dataframe, read_dataframe
+from .utils import write_dataframe, read_dataframe, log_duration
 
 
 class FilesToDataFrame:
@@ -54,6 +54,7 @@ class FilesToDataFrame:
         df = pd.DataFrame.from_dict(data)
         write_dataframe(path, df)
 
+    @log_duration('Walking from the root directory')
     def _walk(self) -> None:
         """
         Walk `directory` recursively,
@@ -122,6 +123,20 @@ class FilesToDataFrame:
 
     def store_final_df(self, df: pd.DataFrame) -> None:
         path = self.get_final_df_path()
+
+        # Cast to more efficient types
+        if df['uid'].max() > 65535:
+            uid_type = 'uint32'
+        else:
+            uid_type = 'uint16'
+        df = df.astype({
+            'path': 'string',
+            'size': 'uint64',
+            'uid': uid_type,
+            'atime': 'uint32',  # Will work until February 2106
+            'mtime': 'uint32',  # Will work until February 2106
+        })
+
         write_dataframe(path, df)
 
     def run(self):
@@ -140,7 +155,7 @@ class FilesToDataFrame:
         df = self._df_from_temp()
         t2 = time()
         _, pp_peak = tracemalloc.get_traced_memory()
-        df_mem_usage = df.memory_usage(index=True).sum()
+        df_mem_usage = sum(df.memory_usage(index=True))
         pp_peak /= (1024 ** 2)
         df_mem_usage /= (1024 ** 2)
         post_process_time = t2 - t1

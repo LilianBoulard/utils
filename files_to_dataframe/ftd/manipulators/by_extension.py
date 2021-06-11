@@ -33,7 +33,7 @@ class ByExtensionManipulator(BaseManipulator):
     ManipulatorContentType = Dict[str, dict]
 
     EXTENSION_COLUMN_NAME = 'extension'
-    SIZES_COLUMN_NAME = 'size'
+    SIZE_COLUMN_NAME = 'size'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -98,7 +98,7 @@ class ByExtensionManipulator(BaseManipulator):
         }
 
     def _get_size_by_index(self, index: pd.Index) -> int:
-        return self.df[self.SIZES_COLUMN_NAME].iloc[index].sum()
+        return self.df[self.SIZE_COLUMN_NAME].iloc[index].sum()
 
     @log_duration('Getting sizes by extension')
     def _get_total_size_by_extension(self) -> Dict[str, int]:
@@ -111,11 +111,7 @@ class ByExtensionManipulator(BaseManipulator):
             for ext, indices in self._indices.items()
         }
 
-    @log_duration('Getting sizes by date ranges')
-    def compute_sizes_by_ranges(self):
-        pass
-
-    def get_sizes_by_ext_and_date(self, ext_list: List[str], date_range_indices: List[int]) -> List[int]:
+    def get_sizes_by_ext_and_index(self, ext_list: List[str], indices: List[int]) -> List[int]:
         data = []
         for ext in ext_list:
             ext_indices = self.content['indices'][ext]
@@ -123,7 +119,7 @@ class ByExtensionManipulator(BaseManipulator):
             # because it is extremely inefficient.
             # One possible optimization would be to use numpy.intersect1d,
             # but might not be worth it because of the array casting.
-            inter = get_lists_intersection(date_range_indices, ext_indices)
+            inter = get_lists_intersection(indices, ext_indices)
             idx = pd.Index(inter)
             size = self._get_size_by_index(idx)
             data.append(size)

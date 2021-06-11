@@ -26,9 +26,9 @@ def read_df(file_path: str) -> pd.DataFrame:
 
 
 def describe(df: pd.DataFrame):
-    print(df.describe())
-    print(df.head())
-    print(df.nunique())
+    print(f'{df.describe()=}')
+    print(f'{df.head()=}')
+    print(f'{df.nunique()=}')
 
 
 if __name__ == "__main__":
