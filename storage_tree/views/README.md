@@ -16,7 +16,7 @@ It should be kept simple and to-the-point.
     touch storage_tree/views/txt.py
 
 Next, write a new class `View` (it **must** have this name),
-which will inherit `BaseView`, which we will import from `base`.
+which will inherit `BaseView`, from `base`.
 
 ```python
 from .base import BaseView
