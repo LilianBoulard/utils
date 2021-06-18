@@ -1,8 +1,9 @@
-import os
 import pandas as pd
 
+from typing import Dict
+from pathlib import Path
+
 from .base import BaseParser
-from typing import List, Tuple
 
 
 class Parser(BaseParser):
@@ -12,7 +13,7 @@ class Parser(BaseParser):
     Example of expected input:
 
     ```
-    df = pandas.DataFrame(
+    pandas.DataFrame(
     {
         'path': [
             '/path/to/file2',
@@ -23,34 +24,29 @@ class Parser(BaseParser):
             10241024,
             1024,
             102410241024
-        ]
+        ],
+        ...
     })
     ```
 
     """
 
-    @staticmethod
-    def tuple_string_to_tuple_object(v: str) -> tuple:
-        """
-        Takes a string formatted like a tuple, and returns an actual tuple.
+    ReadFileStructure = pd.DataFrame
 
-        :param str v: A stringed-tuple.
-        :return tuple:
-        """
-        # Removes special characters.
-        v = v.replace("(", "")
-        v = v.replace(")", "")
-        v = v.replace("'", "")
-        return tuple(v.split(", "))
+    PATHS_COLUMN = 'path'
+    SIZES_COLUMN = 'size'
 
-    def _read_file(self) -> pd.DataFrame:
+    def _read_file(self) -> ReadFileStructure:
         return pd.read_parquet(self.file, engine='fastparquet')
 
-    def _get_content(self) -> List[Tuple[str, int]]:
-        paths = list(self.raw_content.to_dict().values())[0].values()
-        sizes = list(self.raw_content.to_dict().values())[1].values()
-        results = list(zip(paths, sizes))
-        return results
+    def _get_content(self) -> Dict[Path, int]:
 
-    def _get_root(self) -> str:
-        return self.content[0][0].split(os.sep)[0]
+        def to_path(path: str) -> Path:
+            return Path(path)
+
+        return dict(
+            zip(
+                self.raw_content[self.PATHS_COLUMN].apply(to_path).to_list(),
+                self.raw_content[self.SIZES_COLUMN].to_list()
+            )
+        )

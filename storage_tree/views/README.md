@@ -10,7 +10,8 @@ TXT, HTML, CSV, XML, and so on ; you decide !
 Let's implement a simple TXT view to demonstrate the process (spoiler: it's pretty simple).
 
 First, create a new Python file with the name of your view.  
-The name should be lowercase, contain no special character (spaces forbidden).
+The name should be lowercase, and contain no special character (spaces forbidden).
+It should be kept simple and to-the-point.
 
     touch storage_tree/views/txt.py
 
@@ -59,10 +60,10 @@ class View(BaseView):
 For more information about what these methods do and how to implement them properly, 
 have a look at the source code of `storage_tree.views.base.BaseView`.
 
-Now, let's do some code !
+Now, let's write some code !
 
-The logic is simple: the `st_repr` method will only be called once (see code for full explanation),
-so we can technically use it as a wrapper (see `html_colored` view).  
+The logic is simple: the `st_repr` method, the root's, will only be called once (see code for full explanation),
+so we can technically use it as a wrapper (see `html_colored` view for an example of this process).  
 We won't be doing that here because it's not necessary with a `txt` format.
 
 ```python

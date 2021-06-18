@@ -1,7 +1,7 @@
-import os
+from pathlib import Path
+from typing import List, Dict
 
 from .base import BaseParser
-from typing import List, Tuple
 
 
 class Parser(BaseParser):
@@ -36,10 +36,9 @@ class Parser(BaseParser):
 
     def _read_file(self) -> ReadFileStructure:
         with open(self.file, 'r') as fl:
-            raw_content = fl.readlines()
-        return raw_content
+            return fl.readlines()
 
-    def _get_content(self) -> List[Tuple[str, int]]:
+    def _get_content(self) -> Dict[Path, int]:
         # Pop the last line, which is the expected length.
         supposed_length = self.raw_content.pop(-1)
         self.nb_results = len(self.raw_content)
@@ -47,12 +46,10 @@ class Parser(BaseParser):
             f"Incorrect PyDU file format: " \
             f"expected {supposed_length} lines, " \
             f"got {self.nb_results}."
-        results = []
-        for ins in self.raw_content:
-            path, size = self.tuple_string_to_tuple_object(ins)
-            size = int(size)
-            results.append((path, size))
-        return results
 
-    def _get_root(self) -> str:
-        return self.content[0][0].split(os.sep)[0]
+        return dict(
+            [
+                self.tuple_string_to_tuple_object(ins)
+                for ins in self.raw_content
+            ]
+        )

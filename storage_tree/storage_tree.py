@@ -36,19 +36,10 @@ class StorageTreeDirectory:
 
     def child(self, child):
         """
-        Returns a child (node or leaf).
-        Creates it if it doesn't already exist.
-
-        :param StorageTreeDirectory|StorageTreeFile child:
-        :return StorageTreeDirectory|StorageTreeFile:
+        Creates a new child, and returns it.
         """
-        for ch in self.children:
-            if ch.name == child.name:
-                return ch
-        else:
-            # Gets executed at the end of the for loop, if no corresponding child has been found.
-            self.children.append(child)
-            return child
+        self.children.append(child)
+        return child
 
     def increment_size(self, inc: int) -> None:
         """
@@ -92,7 +83,7 @@ class StorageTreeFile:
 
 class StorageTree:
 
-    def __init__(self, pydu_report_file: str, parser_name: str, view_name: str):
+    def __init__(self, pydu_report_file: Path, parser_name: str, view_name: str):
         parser_file = __import__(f'parsers.{parser_name}', fromlist=['parsers'])
         view_file = __import__(f'views.{view_name}', fromlist=['views'])
 
@@ -118,10 +109,68 @@ class StorageTree:
         print(f'Constructing tree, adding {len(self.parser.content)} paths')
         t = time()
 
-        for index, (path, size) in enumerate(self.parser.content):
-            # `index` is used to indicate the rank of
-            # the file on the sizes leaderboard.
-            self.add_leaf(path, size, index)
+        def get_first_divergence_index(p1: Path, p2: Path) -> int:
+            if (not p1) or (not p2):
+                return 0
+            for i, (a, b) in enumerate(zip(p1.parts, p2.parts)):
+                if a != b:
+                    return i
+
+        last_leaf_path = None
+        # We will begin at the root node
+        current_node = self.root
+        for current_leaf_path, current_leaf_size in self.parser.content.items():
+            # At the beginning of the loop:
+            # - We are not at the right place, so we'll have to navigate to our destination
+            # - We have the info of the last leaf, giving us a point of reference
+            # We must:
+            # - Navigate to our destination:
+            #   - We can compute the first divergence index, and navigate to it
+
+            # First, given the last leaf, we'll compute the first divergence point,
+            # meaning the first place where we change directory.
+            divergence_index = get_first_divergence_index(current_leaf_path, last_leaf_path)
+
+            # Now that we have the index, we'll compare our current depth to it,
+            # and navigate accordingly.
+            if current_node.level > divergence_index:
+                # We are in a lower directory, we need to go up the tree.
+                # Compute the difference
+                diff = current_node.level - divergence_index
+                for _ in range(diff):
+                    current_node = current_node.parent
+            elif current_node.level < divergence_index:
+                # We are in an upper directory, we need to go down,
+                # and the next part will take care of that.
+                pass
+            elif current_node.level == divergence_index:
+                # We are already in the right directory, great !
+                pass
+
+            # Now that we are in the good node, we'll steep down.
+            # Get the nodes, from the divergence index, to the leaf (exclusive).
+            parts = current_leaf_path.parts[divergence_index:-1]
+            for i, p in enumerate(parts):
+                current_node = current_node.child(
+                    StorageTreeDirectory(
+                        name=p,
+                        parent=current_node,
+                        level=divergence_index + i + 1
+                    )
+                )
+            else:
+                # After all the parts were added,
+                # we add the leaf.
+                current_node.child(
+                    StorageTreeFile(
+                        path=current_leaf_path,
+                        size=current_leaf_size,
+                        parent=current_node,
+                        result_index=0  # TODO
+                    )
+                )
+
+            last_leaf_path = current_leaf_path
 
         print(f'Done constructing tree, took {time() - t:.3f}s')
 
@@ -132,27 +181,6 @@ class StorageTree:
         self._ran = True
 
         print(f'Done computing sizes, took {time() - t:.3f}s')
-
-    def add_leaf(self, path: Path, size: int, result_index: int) -> None:
-        """
-        Adds a new leaf (file) to the tree.
-        It creates the nodes (directories) on the fly.
-
-        :param Path path: Absolute path to the file.
-        :param int size: Size of the file to add to the tree.
-        :param int result_index: From 0 to ``n``-1 (``n`` being the total number of lines in the PyDU output).
-        The file index 0 is the heaviest.
-        """
-        # Init `st` to be the root.
-        st = self.root
-        # We skip the first, as it's the root, and the last, as it's the file.
-        for index, dir_name in enumerate(path.parts[1:-1]):
-            # We're going to create the directories on the fly:
-            # If the node already exists, we'll get our new reference,
-            # and if it didn't exist, it gets created, and is returned.
-            st = st.child(StorageTreeDirectory(dir_name, st, level=index + 1))
-        else:
-            st.child(StorageTreeFile(path, size, st, result_index))
 
     def compute_dirs_sizes(self) -> int:
         """
@@ -167,14 +195,16 @@ class StorageTree:
 def get_available_parsers() -> List[str]:
     files = os.listdir('parsers')
     # For each file, remove the extension if it's a Python script.
-    parsers = [fl[:-3] for f in files if f.endswith('.py')]
+    parsers = [f[:-3] for f in files if f.endswith('.py')]
+    parsers.pop(parsers.index('base'))
     return parsers
 
 
 def get_available_views() -> List[str]:
     files = os.listdir('views')
     # For each file, remove the extension if it's a Python script.
-    views = [fl[:-3] for f in files if f.endswith('.py')]
+    views = [f[:-3] for f in files if f.endswith('.py')]
+    views.pop(views.index('base'))
     return views
 
 
