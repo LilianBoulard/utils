@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
 from math import floor
+from pathlib import Path
 from datetime import datetime
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 from time import sleep, time, strftime, gmtime
 
 import round_robin as rr
@@ -23,7 +24,7 @@ import round_robin as rr
 # (2) a list of tuples, each containing
 # (1) the path (absolute or relative) to the directory
 # (2) the size, in bytes, of this directory.
-InstanceType = Tuple[int, List[Tuple[str, int]]]
+InstanceType = Tuple[int, List[Tuple[Path, int]]]
 
 
 class DirectoryUsage:
@@ -35,18 +36,18 @@ class DirectoryUsage:
 
     default_value = []
 
-    def __init__(self, root: str, trace: int, delay: int, file_location: str):
+    def __init__(self, root: Path, trace: int, delay: int, file_location: Path):
         self.root = root
         self.delay = delay
         self.file_location = file_location
 
         # Read the database from file if found, otherwise init.
-        if os.path.exists(file_location):
+        if file_location.exists():
             print(f'Reading database {file_location!r}')
             self.rr = rr.RoundRobin.read_from_disk(file_location)
 
-        if not os.path.exists(file_location) or len(self.rr) != trace:
-            print(f'No database found on disk, '
+        if not file_location.exists() or len(self.rr) != trace:
+            print(f'No corresponding database found on disk, '
                   f'creating a new one: {file_location!r}')
             self.rr = rr.RoundRobin(length=trace,
                                     default_value=self.default_value,
@@ -63,7 +64,7 @@ class DirectoryUsage:
     def is_running(self) -> bool:
         return self._running
 
-    def get_directory_size(self, directory: str) -> int:
+    def get_directory_size(self, directory: Union[Path, str]) -> int:
         """
         Recursive function used to get the size of a directory.
         """
@@ -77,17 +78,15 @@ class DirectoryUsage:
                         total_size += os.path.getsize(fp)
                     except (PermissionError, OSError, FileNotFoundError):
                         pass
-
         return total_size
 
-    def list_directories(self) -> List[str]:
+    def list_directories(self) -> List[Path]:
         """
         Parses the root and returns the list of directories it contains.
         """
         dirs = []
-        for p in os.listdir(self.root):
-            path = os.path.join(self.root, p)
-            if os.path.isdir(path):
+        for path in self.root.iterdir():
+            if path.is_dir():
                 dirs.append(path)
         return dirs
 
@@ -185,8 +184,7 @@ class DirectoryUsage:
             # Iterate over the directories census
             for dir_path, dir_size in instance[1]:
 
-                # Get only the tail of the directory path.
-                dir_name = os.path.split(dir_path)[1]
+                dir_name = dir_path.name
 
                 # Append the size to the right dictionary value.
                 try:
@@ -255,14 +253,14 @@ parser.add_argument("--dashboard",
 args = parser.parse_args()
 
 if args.directory:
-    root_directory = args.directory[0]
+    root_directory = Path(args.directory[0]).resolve()
 else:
-    root_directory = os.getcwd()  # Current directory
+    root_directory = Path(os.getcwd()).resolve()  # Current directory
 
 if args.file:
-    output_file = args.file[0]
+    output_file = Path(args.file[0]).resolve()
 else:
-    output_file = 'du.db'  # In the current directory
+    output_file = Path('./du.db').resolve()  # In the current directory
 
 if args.occurrence:
     delay_between_two = args.occurrence[0]

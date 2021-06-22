@@ -1,6 +1,7 @@
 import pickle
 import tracemalloc
 
+from pathlib import Path
 from typing import Any, Tuple
 
 
@@ -79,7 +80,7 @@ class RoundRobin:
     def __init__(self, *,
                  iterable=None, length: int = None,
                  default_value: Any = 0,
-                 file_location: str = "rr.db"):
+                 file_location: Path = Path("./rr.db").resolve()):
 
         self.file_location = file_location
 
@@ -116,7 +117,7 @@ class RoundRobin:
         return len(self.c)
 
     @classmethod
-    def read_from_disk(cls, file_location: str):
+    def read_from_disk(cls, file_location: Path):
         """
         Reads a file for a Round-Robin database.
         """
