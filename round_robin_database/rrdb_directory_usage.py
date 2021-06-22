@@ -11,9 +11,10 @@ from matplotlib.ticker import FuncFormatter
 
 from math import floor
 from pathlib import Path
+from statistics import mean
 from datetime import datetime
-from typing import List, Tuple, Dict, Union
 from time import sleep, time, strftime, gmtime
+from typing import List, Tuple, Dict, Union, Generator
 
 import round_robin as rr
 
@@ -58,13 +59,8 @@ class DirectoryUsage:
 
         self._running: bool = True
 
-    def wait(self) -> None:
-        sleep(self.delay)
-
-    def is_running(self) -> bool:
-        return self._running
-
-    def get_directory_size(self, directory: Union[Path, str]) -> int:
+    @staticmethod
+    def get_directory_size(directory: Union[Path, str]) -> int:
         """
         Recursive function used to get the size of a directory.
         """
@@ -80,15 +76,19 @@ class DirectoryUsage:
                         pass
         return total_size
 
-    def list_directories(self) -> List[Path]:
+    def wait(self) -> None:
+        sleep(self.delay)
+
+    def is_running(self) -> bool:
+        return self._running
+
+    def list_directories(self) -> Generator[Path, None, None]:
         """
         Parses the root and returns the list of directories it contains.
         """
-        dirs = []
         for path in self.root.iterdir():
             if path.is_dir():
-                dirs.append(path)
-        return dirs
+                yield path
 
     def get_instance(self) -> InstanceType:
         """
@@ -158,12 +158,132 @@ class DirectoryUsage:
 
         TODO: Cleanup and better handle missing values
         """
+        AllType = Dict[str, List[int]]
 
-        fig = plt.figure(figsize=(15, 10))
-        ax = fig.add_subplot()
-        ax.set_title(f'Disk usage of {self.root!r} by directory')
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Size in MB")
+        def widest_range_plot(tmp_list: List[int], all_ranges: AllType, sub_ax) -> None:
+            """
+            Draw a plot which contains the widest ranges.
+            """
+            # Get the appropriate size denominator, e.g. KB, MB, GB...
+            max_size: int = max(max(v) for v in all_dirs.values())
+            denominator, _ = format_sizes([max_size])
+            # Compute the range for each directory
+            ranges = {
+                dir_name: max(sizes) - min(sizes)
+                for dir_name, sizes in all_ranges.items()
+            }
+            # Sort them
+            ranges = dict(sorted(ranges.items(), key=lambda x: x[1], reverse=True))
+            # Get total range
+            total_range = max(max(v) for v in all_ranges.values()) - \
+                          min(min(v) for v in all_ranges.values())
+            # For the 10 first (the heaviest)
+            top_ranges = list(ranges.items())[:10]
+            plotted: int = 0  # To keep track of how many we plotted
+            for dir_name, rng in top_ranges:
+                # If there is little to no variance, move to the next
+                if rng < total_range * 0.05:
+                    continue
+                # Get the sizes for this directory
+                sizes = all_ranges[dir_name]
+                # Format them
+                _, sizes = format_sizes(sizes, factor=denominator)
+                # And plot them
+                sub_ax.plot(tmp_list, sizes, label=dir_name)
+                print(len(sub_ax))
+                plotted += 1
+            format_dates(sub_ax)
+            sub_ax.set_title(f'Top {plotted} directories with most variance in size')
+            sub_ax.set_xlabel("Date")
+            sub_ax.set_ylabel(f"Size in {denominator}")
+
+        def top_mean_plot(tmp_list: List[int], all_means: AllType, sub_ax) -> None:
+            """
+            Draw a plot which contains the top means.
+            """
+            # Get the appropriate size denominator, e.g. KB, MB, GB...
+            max_size = max(max(v) for v in all_dirs.values())
+            denominator, _ = format_sizes([max_size])
+            # Compute the means
+            means = {dir_name: mean(sizes) for dir_name, sizes in all_means.items()}
+            # Sort them
+            means = dict(sorted(means.items(), key=lambda x: x[1], reverse=True))
+            # For the 10 first (the heaviest)
+            top_means = list(means.items())[:10]
+            plotted: int = 0  # To keep track of how many we plotted
+            for dir_name, _ in top_means:
+                # Get the sizes
+                sizes = all_means[dir_name]
+                # Format them
+                _, sizes = format_sizes(sizes, factor=denominator)
+                # And plot them
+                sub_ax.plot(tmp_list, sizes, label=dir_name)
+                plotted += 1
+            format_dates(sub_ax)
+            sub_ax.set_title(f'Top {plotted} directories with the highest mean size')
+            sub_ax.set_xlabel("Date")
+            sub_ax.set_ylabel(f"Size in {denominator}")
+
+        def format_dates(target_ax) -> None:
+            # Convert displayed timestamps to human-readable dates
+            target_ax.get_xaxis().set_major_formatter(
+                FuncFormatter(lambda tm, p: strftime(date_format, gmtime(tm)))
+            )
+
+        def format_sizes(sizes_list: List[int], factor: Union[int, str] = 'auto') -> Tuple[str, List[int]]:
+            """
+            Format the sizes in `sizes_list` using `factor` if specified,
+            otherwise guess it.
+            :param sizes_list: The list of sizes to format.
+            :param factor: Factor used to divide the size,
+                           by default in bytes, to a more readable range.
+                           Can be an integer, i.e. 1 for KB, 2 for MB, 3 for GB...
+                           A string, i.e.g 'KB', 'MB', 'GB'...
+                           'auto' for automatic casting
+            """
+            size_range_map = ['B', 'KB', 'MB', 'GB', 'TB']
+            if factor == 'auto':
+                max_size = max(sizes_list)
+                for i in range(len(size_range_map)):
+                    if max_size / (1024 ** i) < 1024:
+                        factor = i
+                        break
+                else:
+                    # If we reach the end of the for loop,
+                    # we use the highest factor we can.
+                    factor = len(size_range_map) -1
+            elif isinstance(factor, str):
+                try:
+                    factor = size_range_map.index(factor)
+                except ValueError:
+                    raise ValueError(
+                        f'Invalid factor: got {factor!r}, '
+                        f'expected any of {size_range_map}'
+                    )
+            else:
+                raise ValueError(
+                    f"Invalid factor: got {factor!r}, "
+                    f"expected 'auto' or integer"
+                )
+
+            # Here, factor is necessarily an integer,
+            # though it might still be out of range
+            try:
+                denominator = size_range_map[factor]
+            except IndexError:
+                raise ValueError(
+                    f'Invalid factor: should be an integer in range '
+                    f'(0, {len(size_range_map)})'
+                )
+
+            # `factor` and `denominator` are valid
+
+            formatted_sizes = [
+                round(size / (1024 ** factor), 3)
+                for size in sizes_list
+            ]
+
+            return denominator, formatted_sizes
 
         # Construct the timestamp list.
         # It is ordered from the least recent (first)
@@ -174,7 +294,7 @@ class DirectoryUsage:
             if self.rr[i] != self.default_value
         ]
 
-        all_dirs: Dict[str, List[int, ...]] = {}
+        all_dirs: AllType = {}
         for i in range(len(self.rr)):
             instance: InstanceType = self.rr[i]
 
@@ -195,20 +315,10 @@ class DirectoryUsage:
                     # in the dictionary, we add it with its first value.
                     all_dirs.update({dir_name: [dir_size]})
 
-        for dir_name, sizes in all_dirs.items():
+        fig, ax = plt.subplots(2, 1, figsize=(15, 10), sharex=True)
 
-            # Convert sizes to megabytes
-            formatted_sizes = [
-                round(size / (1024 ** 2), 3)
-                for size in sizes
-            ]
-
-            ax.plot(timestamp_list, formatted_sizes, label=dir_name)
-
-        # Convert displayed timestamps to human-readable dates
-        ax.get_xaxis().set_major_formatter(
-            FuncFormatter(lambda tm, p: strftime(date_format, gmtime(tm)))
-        )
+        top_mean_plot(timestamp_list, all_dirs, ax[0])
+        widest_range_plot(timestamp_list, all_dirs, ax[1])
 
         plt.legend()
         print('Showing dashboard')
