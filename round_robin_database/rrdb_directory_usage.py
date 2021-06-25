@@ -190,12 +190,12 @@ class DirectoryUsage:
                 _, sizes = format_sizes(sizes, factor=denominator)
                 # And plot them
                 sub_ax.plot(tmp_list, sizes, label=dir_name)
-                print(len(sub_ax))
                 plotted += 1
             format_dates(sub_ax)
             sub_ax.set_title(f'Top {plotted} directories with most variance in size')
             sub_ax.set_xlabel("Date")
             sub_ax.set_ylabel(f"Size in {denominator}")
+            sub_ax.legend()
 
         def top_mean_plot(tmp_list: List[int], all_means: AllType, sub_ax) -> None:
             """
@@ -223,6 +223,7 @@ class DirectoryUsage:
             sub_ax.set_title(f'Top {plotted} directories with the highest mean size')
             sub_ax.set_xlabel("Date")
             sub_ax.set_ylabel(f"Size in {denominator}")
+            sub_ax.legend()
 
         def format_dates(target_ax) -> None:
             # Convert displayed timestamps to human-readable dates
@@ -320,7 +321,6 @@ class DirectoryUsage:
         top_mean_plot(timestamp_list, all_dirs, ax[0])
         widest_range_plot(timestamp_list, all_dirs, ax[1])
 
-        plt.legend()
         print('Showing dashboard')
         plt.show()
 
