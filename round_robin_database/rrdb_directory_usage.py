@@ -149,7 +149,7 @@ class DirectoryUsage:
             except KeyboardInterrupt:
                 break
 
-    def dashboard(self, date_format: str = '%c') -> None:
+    def dashboard(self, date_format: str = '%a %d %b %Y') -> None:
         """
         Creates a dashboard.
 
