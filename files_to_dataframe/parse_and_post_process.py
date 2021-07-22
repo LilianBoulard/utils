@@ -38,6 +38,8 @@ _parser.add_argument("--file",
 _args = _parser.parse_args()
 
 _root_directory = Path(_args.directory[0]).resolve()
+if not _root_directory.exists():
+    raise RuntimeError('Invalid root directory')
 
 if _args.limit:
     _mem_limit = _args.limit[0]
