@@ -55,8 +55,7 @@ else:
     skip_post_process = False
 
 
-if __name__ == "__main__":
-
+def main():
     print(f'Launched on {datetime.now()}')
 
     if skip_parsing:
@@ -67,3 +66,7 @@ if __name__ == "__main__":
     if not skip_post_process:
         df = ftd.utils.read_dataframe(_file)
         ftd.PostProcessor(_file, df)
+
+
+if __name__ == "__main__":
+    main()

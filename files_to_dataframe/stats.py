@@ -68,10 +68,10 @@ else:
     _user_id = None
 
 
-if __name__ == "__main__":
-
+def main():
     print(f'Launched on {datetime.now()}')
 
+    global _save
     if _compute_only and not _save:
         warn('`--save` was not indicated, but mandatory when passing `--computeonly`. '
              'Switching `--save` from False to True.')
@@ -85,3 +85,7 @@ if __name__ == "__main__":
     if not _compute_only:
         dashboard = ftd.Dashboard(analyzer)
         dashboard.dashboard()
+
+
+if __name__ == "__main__":
+    main()
