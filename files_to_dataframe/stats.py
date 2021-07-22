@@ -7,6 +7,9 @@ from datetime import datetime
 import ftd
 
 
+ftd.utils.tune_matplotlib_backend()
+
+
 _parser = argparse.ArgumentParser(
     "Run analytics on a DataFrame generated and post-processed by FTD, "
     "and display a dashboard containing useful information."
