@@ -37,6 +37,7 @@ class Dashboard:
         self._extension_by_user_stacked_bar(axes[1, 1], standalone=False)
         if save:
             self._save_graph(location)
+            print(f'Saved graph at {location!r}')
         plt.show()
 
     def _save_graph(self, location: Path) -> None:

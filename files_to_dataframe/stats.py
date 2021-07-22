@@ -5,9 +5,10 @@ from warnings import warn
 from datetime import datetime
 
 import ftd
+from ftd import _utils
 
 
-ftd.utils.tune_matplotlib_backend()
+_utils.tune_matplotlib_backend()
 
 
 _parser = argparse.ArgumentParser(

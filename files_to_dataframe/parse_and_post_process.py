@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 
 import ftd
+from ftd import _utils
 
 
 _parser = argparse.ArgumentParser(
@@ -63,10 +64,10 @@ def main():
     if skip_parsing:
         _file = Path(_args.file[0])
     else:
-        _file = ftd.FilesToDataFrame(directory=_root_directory, mem_limit=_mem_limit).get_final_df_path()
+        _file = ftd.FTDParser(directory=_root_directory, mem_limit=_mem_limit).parser.get_final_df_path()
 
     if not skip_post_process:
-        df = ftd.utils.read_dataframe(_file)
+        df = _utils.read_dataframe(_file)
         ftd.PostProcessor(_file, df)
 
 
