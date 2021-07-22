@@ -7,6 +7,9 @@ from datetime import datetime
 import ftd
 
 
+ftd.utils.tune_matplotlib_backend()
+
+
 _parser = argparse.ArgumentParser(
     "Run analytics on a DataFrame generated and post-processed by FTD, "
     "and display a dashboard containing useful information."
@@ -94,10 +97,10 @@ else:
     _ext = None
 
 
-if __name__ == "__main__":
-
+def main():
     print(f'Launched on {datetime.now()}')
 
+    global _save
     if _compute_only and not _save:
         warn('`--save` was not indicated, but mandatory when passing `--computeonly`. '
              'Switching `--save` from False to True.')
@@ -117,3 +120,7 @@ if __name__ == "__main__":
     if not _compute_only:
         dashboard = ftd.Dashboard(analyzer)
         dashboard.dashboard(_save_graph, _graph_path)
+
+
+if __name__ == "__main__":
+    main()

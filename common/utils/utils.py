@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 
 from time import time
@@ -45,3 +47,13 @@ def read_dataframe(file_path: Path) -> pd.DataFrame:
 @log_duration('Writing DataFrame')
 def write_dataframe(file_path: Path, df: pd.DataFrame) -> None:
     df.to_parquet(file_path, **parquet_write_kwargs)
+
+
+def tune_matplotlib_backend():
+    # Detect if there is no display, and if so, change backend.
+    try:
+        if os.environ['DISPLAY'] == ':0.0':
+            raise KeyError
+    except KeyError:
+        import matplotlib
+        matplotlib.use('Agg')

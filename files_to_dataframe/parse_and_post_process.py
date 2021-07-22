@@ -38,6 +38,8 @@ _parser.add_argument("--file",
 _args = _parser.parse_args()
 
 _root_directory = Path(_args.directory[0]).resolve()
+if not _root_directory.exists():
+    raise RuntimeError('Invalid root directory')
 
 if _args.limit:
     _mem_limit = _args.limit[0]
@@ -55,8 +57,7 @@ else:
     skip_post_process = False
 
 
-if __name__ == "__main__":
-
+def main():
     print(f'Launched on {datetime.now()}')
 
     if skip_parsing:
@@ -67,3 +68,7 @@ if __name__ == "__main__":
     if not skip_post_process:
         df = ftd.utils.read_dataframe(_file)
         ftd.PostProcessor(_file, df)
+
+
+if __name__ == "__main__":
+    main()
