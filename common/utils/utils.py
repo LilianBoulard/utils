@@ -1,10 +1,20 @@
 import pandas as pd
 
 from time import time
-from pathlib import Path
 from typing import List
+from pathlib import Path
+from functools import wraps
 
-from .config import parquet_write_kwargs, parquet_read_kwargs
+
+parquet_write_kwargs = {
+    'engine': 'fastparquet',
+    'compression': 'gzip',
+    'row_group_offsets': 5000000
+}
+
+parquet_read_kwargs = {
+    'engine': 'fastparquet'
+}
 
 
 def get_lists_intersection(list1: List[int], list2: List[int]):
@@ -16,6 +26,7 @@ def log_duration(message):
     A decorator that can be used to print information regarding the execution duration of a function.
     """
     def decorator(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             print(message)
             t0 = time()
