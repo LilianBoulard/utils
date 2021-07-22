@@ -27,6 +27,11 @@ _parser.add_argument("--save",
                           "as the computation can be really expensive."
                           "False by default, specify for True.",
                      action="store_true")
+_parser.add_argument("--savegraph",
+                     help="Saves the graph drawn at the end of the processing part. "
+                          "Naming convention: <file_name>_<day>_<month>_<year>_graph.png "
+                          "False by default, specify for True.",
+                     action="store_true")
 _parser.add_argument("--computeonly",
                      help="If you wish to only compute the stats "
                           "and save them for later visualization, "
@@ -37,8 +42,14 @@ _parser.add_argument("--computeonly",
 _parser.add_argument("--savebyuser",
                      help="Saves a DataFrame containing only the files "
                           "that are owned by the specified user. "
-                          "Can either be an uid or the readable name of the user."
-                          "False by default, specify for True.",
+                          "Must be a user name (not a uid). "
+                          "e.g. root",
+                     type=str, nargs=1)
+_parser.add_argument("--savebyext",
+                     help="Saves a DataFrame containing only the files "
+                          "which have the specified extension. "
+                          "Must be an extension, without leading dot. "
+                          "e.g. csv",
                      type=str, nargs=1)
 
 _args = _parser.parse_args()
@@ -55,6 +66,14 @@ if _args.save:
 else:
     _save = False
 
+if _args.savegraph:
+    _save_graph = True
+    now = datetime.now()
+    _graph_path = Path('.').resolve() / f'{_file}_{now.day}_{now.month}_{now.year}_graph.png'
+else:
+    _save_graph = False
+    _graph_path = None
+
 if _args.computeonly:
     _compute_only = True
 else:
@@ -62,10 +81,17 @@ else:
 
 if _args.savebyuser:
     _save_by_user = True
-    _user_id = _args.savebyuser[0]
+    _user_name = _args.savebyuser[0]
 else:
     _save_by_user = False
-    _user_id = None
+    _user_name = None
+
+if _args.savebyext:
+    _save_by_ext = True
+    _ext = _args.savebyext[0]
+else:
+    _save_by_ext = False
+    _ext = None
 
 
 if __name__ == "__main__":
@@ -76,12 +102,18 @@ if __name__ == "__main__":
         warn('`--save` was not indicated, but mandatory when passing `--computeonly`. '
              'Switching `--save` from False to True.')
         _save = True
+        if _save_graph:
+            warn('`--savegraph` was indicated, but is incompatible with `--computeonly`. '
+                 'Switching `--savegraph` from True to False.')
 
     analyzer = ftd.Analyzer(_file, _load, _save)
 
     if _save_by_user:
-        analyzer.save_df_by_user(_user_id)
+        analyzer.save_df_by_user(_user_name)
+
+    if _save_by_ext:
+        analyzer.save_df_by_ext(_ext)
 
     if not _compute_only:
         dashboard = ftd.Dashboard(analyzer)
-        dashboard.dashboard()
+        dashboard.dashboard(_save_graph, _graph_path)

@@ -9,7 +9,7 @@ import pandas as pd
 from pathlib import Path
 from sys import platform
 
-from .utils import log_duration, write_dataframe
+from ._utils import log_duration, write_dataframe
 
 # Right now, we use `pwd` for linux,
 # which is currently the only distro supported.

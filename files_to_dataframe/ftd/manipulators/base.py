@@ -4,8 +4,6 @@ import pandas as pd
 from abc import ABC
 from pathlib import Path
 
-from ..utils import log_duration
-
 
 class BaseManipulator(ABC):
 
@@ -31,42 +29,30 @@ class BaseManipulator(ABC):
     # Use builtins and/or `typing` library.
     ManipulatorContentType = None
 
-    def __init__(self, file_path: Path, df: pd.DataFrame, load: bool = False, save: bool = False):
+    def __init__(self, parent, file_path: Path, load: bool = False, save: bool = False):
+        self.collection = parent
         self.file_path = file_path
-        self.df = df
         self._load = load
         self._save = save
+        self.content = None
 
         self.PERSISTENT_FILE = (Path('./persistent/') / Path(self.__class__.__name__ + '.pickle')).resolve()
 
         self.PERSISTENT_FILE.parent.mkdir(exist_ok=True)
 
-        if load:
-            self.content = self.load()
-            self.sort()
-        else:
-            self.content = self._compute()
-            self.sort()
-
-        if save and not load:
-            self.save()
-
-    @log_duration('Loading content')
-    def load(self) -> ManipulatorContentType:
+    def load(self) -> None:
         """
         From a file on the disk, load the previously computed content.
         """
         with open(self.PERSISTENT_FILE, 'rb') as fl:
-            return pickle.load(fl)
+            self.content = pickle.load(fl)
 
-    @log_duration('Saving content')
     def save(self) -> None:
         """
         Takes `self.content`, and writes it in a file.
         """
         with open(self.PERSISTENT_FILE, 'wb') as fl:
             pickle.dump(self.content, fl)
-        return
 
     def get_content(self) -> ManipulatorContentType:
         """
@@ -76,19 +62,29 @@ class BaseManipulator(ABC):
         """
         return self.content
 
-    def _compute(self) -> ManipulatorContentType:
-        """
-        Runs the desired manipulator computation,
-        and returns the usable content.
-
-        To get the results after the manipulator's instantiation,
-        use `get_content()`.
-        """
-        raise NotImplementedError
-
-    @log_duration('Sorting content')
     def sort(self) -> None:
         """
         Optional. Sorts `self.content` if necessary.
+        """
+        raise NotImplementedError
+
+    def init_iter_df(self, df: pd.DataFrame) -> None:
+        """
+        Initializes instances variables before the parent analyzer
+        begins iterating rows, and calling `process_row`.
+        """
+        raise NotImplementedError
+
+    def process_row(self, idx: int, **kwargs) -> None:
+        """
+        Takes the information of one line from the dataframe,
+        and performs some analysis on it.
+        """
+        raise NotImplementedError
+
+    def post_process(self) -> None:
+        """
+        Performs some post-processing, such as feature extraction.
+        Also a good time to sort the results.
         """
         raise NotImplementedError
