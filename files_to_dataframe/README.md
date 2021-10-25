@@ -28,9 +28,6 @@ To get the available parameters and their documentation, launch
     python3 <script>.py -h
 
 
-Two more columns are created upon running ``post_processing.py``:
-
-
 ### Optional
 
 - ``ftd/describe_dataframe.py`` can be used to describe a DataFrame and gain some insights on its content.
