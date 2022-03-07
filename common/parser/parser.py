@@ -10,8 +10,8 @@ import fastparquet  # Only here to raise error if not installed.
 import tracemalloc
 import pandas as pd
 
-from time import time
 from pathlib import Path
+from time import perf_counter
 from typing import Callable, List, Optional, Any, Dict
 
 from ._utils import write_dataframe, read_dataframe, log_duration
@@ -71,7 +71,7 @@ class Parser:
         """
         Walk `directory` recursively,
         and store the results in temporary files on the disk.
-        :param structure: A list of strings, which will be used by the callbacks.
+        :param structure: The columns of the output dataframe.
         :param file_callback: The callback which will be called with every file.
         Takes one argument: the file path (string), and returns a dictionary with
         as keys the values of `structure`, representing the columns,
@@ -87,6 +87,11 @@ class Parser:
         self.temp_dir.mkdir(exist_ok=False)  # If this raises FileExistsError, delete temp dir
 
         def get_default_dict() -> Dict[str, Any]:
+            """
+            Returns an dictionary with as keys the columns and as values
+            empty lists.
+            This directory will be converted to a pandas DataFrame later on.
+            """
             return {v: [] for v in structure}
 
         def append_values(new_values: Dict[str, Any], dictionary: Dict[str, Any]):
@@ -138,12 +143,18 @@ class Parser:
         name = self.clean_path(self.directory) + '_persistent.df'
         return Path('./', name).resolve()
 
-    def store_final_df(self, df: pd.DataFrame, optimization_callback: Optional[Callable] = None) -> None:
+    def store_final_df(self, df: pd.DataFrame,
+                       optimization_callback: Optional[Callable] = None,
+                       ) -> None:
         """
-        Concatenates all the temporary DataFrames, and stores a final DataFrame on disk.
+        Concatenates all the temporary DataFrames,
+        and stores a final DataFrame on disk.
         :param df: DataFrame to store
-        :param optimization_callback: A callback to a function that will be in charge of optimizing the DataFrame.
-        It takes one argument: the pandas DataFrame, and returns the optimized pandas DataFrame.
+        :param optimization_callback: A callback to a function that will be in
+        charge of optimizing the DataFrame. Takes a single argument, the
+        dataframe, and must return a pandas DataFrame.
+        It takes one argument: the pandas DataFrame, and returns the optimized
+        pandas DataFrame.
         """
         path = self.get_final_df_path()
         if optimization_callback:
@@ -155,16 +166,16 @@ class Parser:
             file_callback: Optional[Callable] = None,
             directory_callback: Optional[Callable] = None,
             optimization_callback: Optional[Callable] = None,
-            ):
+            ) -> Path:
         """
         Main function, runs all the computation.
         For arguments description, see methods `_walk` and `store_final_df`.
         """
         tracemalloc.start()
-        t0 = time()
+        t0 = perf_counter()
 
         self._walk(structure, file_callback, directory_callback)
-        t1 = time()
+        t1 = perf_counter()
         _, walk_peak = tracemalloc.get_traced_memory()
         walk_peak /= (1024 ** 2)
         parsing_time = t1 - t0
@@ -173,7 +184,7 @@ class Parser:
               f'mem_peak={walk_peak:.3f}MB')
 
         df = self._df_from_temp()
-        t2 = time()
+        t2 = perf_counter()
         _, pp_peak = tracemalloc.get_traced_memory()
         df_mem_usage = sum(df.memory_usage(index=True))
         pp_peak /= (1024 ** 2)
@@ -186,7 +197,7 @@ class Parser:
               f'df_mem={df_mem_usage:.3f}MB')
 
         self.store_final_df(df, optimization_callback)
-        t3 = time()
+        t3 = perf_counter()
         _, store_peak = tracemalloc.get_traced_memory()
         store_peak /= (1024 ** 2)
         store_time = t3 - t2
@@ -197,7 +208,9 @@ class Parser:
         _, total_peak = tracemalloc.get_traced_memory()
         total_peak /= (1024 ** 2)
         print(f'Total stats: '
-              f'duration={time() - t0:.3f}s, '
+              f'duration={perf_counter() - t0:.3f}s, '
               f'peak={total_peak:.3f}MB')
 
         tracemalloc.stop()
+
+        return self.get_final_df_path()
