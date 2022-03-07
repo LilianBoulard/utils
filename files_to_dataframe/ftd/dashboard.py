@@ -148,7 +148,8 @@ class Dashboard:
 
         data = {}
         for user_name in self.displayed_users:
-            user_indices = user_content['indices'][user_name]
+            user_id = user_name if user_name != 'Nobody' else ''
+            user_indices = user_content['indices'][user_id]
             sizes = self._analyzer.get_sizes_by_ext_and_index(
                 extensions,
                 user_indices
@@ -187,7 +188,8 @@ class Dashboard:
 
         data = {}
         for user_name in self.displayed_users:
-            user_indices = self._analyzer.manipulators.user_manipulator.content['indices'][user_name]
+            user_id = user_name if user_name != 'Nobody' else ''
+            user_indices = self._analyzer.manipulators.user_manipulator.content['indices'][user_id]
             sizes = self._analyzer.get_directory_usage_by_index(top_dirs, user_indices)
             # Convert to GB
             sizes = [size / (1024 ** 3) for size in sizes]
