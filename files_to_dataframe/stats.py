@@ -1,4 +1,5 @@
 import argparse
+import pandas as pd
 
 from pathlib import Path
 from warnings import warn
@@ -43,18 +44,6 @@ _parser.add_argument("--computeonly",
                           "`--save` is mandatory. "
                           "False by default, specify for True.",
                      action="store_true")
-_parser.add_argument("--savebyuser",
-                     help="Saves a DataFrame containing only the files "
-                          "that are owned by the specified user. "
-                          "Must be a user name (not a uid). "
-                          "e.g. root",
-                     type=str, nargs=1)
-_parser.add_argument("--savebyext",
-                     help="Saves a DataFrame containing only the files "
-                          "which have the specified extension. "
-                          "Must be an extension, without leading dot. "
-                          "e.g. csv",
-                     type=str, nargs=1)
 
 _args = _parser.parse_args()
 
@@ -83,20 +72,6 @@ if _args.computeonly:
 else:
     _compute_only = False
 
-if _args.savebyuser:
-    _save_by_user = True
-    _user_name = _args.savebyuser[0]
-else:
-    _save_by_user = False
-    _user_name = None
-
-if _args.savebyext:
-    _save_by_ext = True
-    _ext = _args.savebyext[0]
-else:
-    _save_by_ext = False
-    _ext = None
-
 
 def main():
     print(f'Launched on {datetime.now()}')
@@ -110,16 +85,8 @@ def main():
             warn('`--savegraph` was indicated, but is incompatible with `--computeonly`. '
                  'Switching `--savegraph` from True to False.')
 
-    analyzer = ftd.Analyzer(_file, _load, _save)
-
-    if _save_by_user:
-        analyzer.save_df_by_user(_user_name)
-
-    if _save_by_ext:
-        analyzer.save_df_by_ext(_ext)
-
     if not _compute_only:
-        dashboard = ftd.Dashboard(analyzer)
+        dashboard = ftd.Dashboard(pd.read_parquet(_file))
         dashboard.dashboard(_save_graph, _graph_path)
 
 
