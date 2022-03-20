@@ -57,11 +57,11 @@ class Dashboard:
             # Cast the size to the best possible size metric
             # e.g. if a file is 20 000 bytes, cast to ~20KB
             for s in self._size_mapping:
-                if absolute < 1000:
+                if absolute < 1024:
                     size = s
                     break
                 else:
-                    absolute /= 1000
+                    absolute /= 1024
             else:
                 size = self._size_mapping[-1]
             return f"{absolute:.1f}{size}\n{percentage:.1f}%"
@@ -156,7 +156,7 @@ class Dashboard:
             # Avoids having decimal in case we're close to the upper unit.
             unit_index -= 1
         # 3. Apply the standardization on all values
-        data = data.applymap(lambda size: size / (1000 ** unit_index))
+        data = data.applymap(lambda size: size / (1024 ** unit_index))
 
         # TODO: Rename empty extension
 
@@ -165,7 +165,7 @@ class Dashboard:
         data.plot(ax=ax, kind='bar', rot=25, stacked=True)
 
         ax.set_ylabel(f'Size in {self._size_mapping[unit_index]}')
-        ax.set_title(f'Disk usage by extension, filtered by last access')
+        ax.set_title(f'Disk usage by extension, categorized by last access')
 
         if standalone:
             plt.show()
@@ -239,7 +239,7 @@ class Dashboard:
             # Avoids having decimal in case we're close to the upper unit.
             unit_index -= 1
         # 3. Apply the standardization on all values
-        data = data.apply(lambda size: size / (1000 ** unit_index))
+        data = data.apply(lambda size: size / (1024 ** unit_index))
 
         # FIXME: quickfix
         data = data.T
@@ -289,7 +289,7 @@ class Dashboard:
             # Avoids having decimal in case we're close to the upper unit.
             unit_index -= 1
         # 3. Apply the standardization on all values
-        data = data.apply(lambda size: size / (1000 ** unit_index))
+        data = data.apply(lambda size: size / (1024 ** unit_index))
 
         # TODO: Rename empty users (which are in the index)
         #  And empty extension (which is in the columns)
