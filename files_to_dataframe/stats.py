@@ -1,5 +1,4 @@
 import argparse
-import pandas as pd
 
 from pathlib import Path
 from datetime import datetime
@@ -41,7 +40,7 @@ else:
 def main():
     print(f'Launched on {datetime.now()}')
 
-    dashboard = ftd.Dashboard(pd.read_parquet(_file))
+    dashboard = ftd.Dashboard(_utils.read_dataframe(_file))
     dashboard.dashboard(_save_graph, _graph_path)
 
 

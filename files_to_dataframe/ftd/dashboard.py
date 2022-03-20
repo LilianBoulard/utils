@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from time import time
 from pathlib import Path
 from typing import Dict, Optional, List
+from itertools import product
 
 from ._utils import log_duration
 
@@ -32,8 +33,8 @@ class Dashboard:
         fig, axes = plt.subplots(2, 2, dpi=120, figsize=(12, 6), constrained_layout=True)
         self._user_pie_chart(axes[0, 0], standalone=False)
         self._extension_by_time_stacked_bar(axes[0, 1], standalone=False)
-        self._usage_by_directory_stacked_bar(axes[1, 0], standalone=False)
-        self._extension_by_user_stacked_bar(axes[1, 1], standalone=False)
+        self._usage_by_directory_bar_plot(axes[1, 0], standalone=False)
+        self._extension_by_user_bar_plot(axes[1, 1], standalone=False)
         if save:
             self._save_graph(location)
             print(f'Saved graph at {location!r}')
@@ -56,11 +57,11 @@ class Dashboard:
             # Cast the size to the best possible size metric
             # e.g. if a file is 20 000 bytes, cast to ~20KB
             for s in self._size_mapping:
-                if absolute < 1024:
+                if absolute < 1000:
                     size = s
                     break
                 else:
-                    absolute /= 1024
+                    absolute /= 1000
             else:
                 size = self._size_mapping[-1]
             return f"{absolute:.1f}{size}\n{percentage:.1f}%"
@@ -83,6 +84,8 @@ class Dashboard:
         displayed_counts.append(other.sum())
         displayed_users.append('Other users')
 
+        print('User pie chart data:')
+        print(displayed_counts)
         ax.pie(displayed_counts, labels=displayed_users, startangle=140,
                autopct=lambda pct: format_pct(pct, displayed_counts))
         ax.set_title(f'Top {len(displayed_users)} users')
@@ -90,10 +93,11 @@ class Dashboard:
         if standalone:
             plt.show()
 
-    def _extension_by_time_stacked_bar(self, ax=None, standalone: bool = True, n_ext: int = 8) -> None:
+    def _extension_by_time_stacked_bar(self, ax=None, standalone: bool = True,
+                                       n_ext: int = 8) -> None:
         """
-        Displays an histogram which shows the `n` extensions that uses the most space,
-        split among different time ranges.
+        Displays an histogram which shows the `n` extensions that uses
+        the most space, split among different time ranges.
         """
 
         if standalone:
@@ -103,7 +107,7 @@ class Dashboard:
         extensions = self.df.groupby(['extension'])['size'].sum().sort_values(ascending=False).iloc[:n_ext].index.to_list()
 
         # Get a sub-df with only the extensions we're not interested in.
-        df = self.df[self.df['extensions'].isin(extensions)]
+        df = self.df[self.df['extension'].isin(extensions)]
 
         # Time ranges. They are mutually exclusive, and must be ordered from
         # the most recent to the oldest.
@@ -119,34 +123,45 @@ class Dashboard:
         for range_name, duration in ranges.items():
             upper_bound = offset
             lower_bound = 0 if duration == 0 else upper_bound - duration
-            df[range_name] = lower_bound < df['atime'] < upper_bound
+            df.loc[:, range_name] = df['atime'].between(lower_bound, upper_bound, inclusive='left')
             # Move offset
             offset = lower_bound
 
-        # The DataFrame will have as lines the extensions, and as columns
-        # the time ranges.
-        data = pd.DataFrame()
+        # "data" will have as index the extensions, as columns the size ranges
+        # time range, and as values the total size corresponding.
+        data = pd.DataFrame(index=extensions)
         for range_name, duration in ranges.items():
-            sizes = df.groupby(['extension', range_name])['size'].sum().loc[:, True]
-            data[range_name] = sizes
+            sizes = df.groupby(['extension', range_name])['size'].sum()
+            sizes = sizes.reset_index(level=[1])
+            # If there is at least one True, get the values, otherwise,
+            # create a vector of zeroes.
+            if sizes[range_name].sum() > 1:
+                mask = sizes[range_name]
+                sizes = sizes[mask]
+                del sizes[range_name]
+                # Rename the "size" column before merging it to the data
+                sizes = sizes.rename(columns={'size': range_name})
+                data = pd.concat([data, sizes[range_name]], axis=1)
+            else:
+                sizes = [0] * len(extensions)
+                data[range_name] = sizes
+        data.fillna(0)
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
         all_max = data.max(axis=1).max()
         # 2. Get unit index
         unit_index = len(str(all_max)) // 3
-        if all_max % 3 == 0:
+        if len(str(all_max)) % 3 == 0:
             # Avoids having decimal in case we're close to the upper unit.
             unit_index -= 1
         # 3. Apply the standardization on all values
         data = data.applymap(lambda size: size / (1000 ** unit_index))
 
-        # Move the extensions to their own column instead of the index
-        data.reset_index(inplace=True)
+        # TODO: Rename empty extension
 
-        # Rename empty extension
-        data.loc[data['extension'] == '', 'extension'] = 'No extension'
-
+        print('Extension by time data:')
+        print(data)
         data.plot(ax=ax, kind='bar', rot=25, stacked=True)
 
         ax.set_ylabel(f'Size in {self._size_mapping[unit_index]}')
@@ -155,12 +170,12 @@ class Dashboard:
         if standalone:
             plt.show()
 
-    def _usage_by_directory_stacked_bar(self, ax=None, standalone: bool = True,
-                                        n_dir: int = 8, n_users: int = 5,
-                                        depth: Optional[int] = None) -> None:
+    def _usage_by_directory_bar_plot(self, ax=None, standalone: bool = True,
+                                     n_dir: int = 8, n_users: int = 5,
+                                     depth: Optional[int] = None) -> None:
         """
-        Display a stacked bar plot showing
-        which users use the most space by subdirectory at a given depth.
+        Display a bar plot showing which users use the most space by
+        subdirectory at a given depth.
 
         Pass depth if you know it, otherwise, using None, it will be guessed.
         """
@@ -174,8 +189,8 @@ class Dashboard:
             fig, ax = plt.figure(8, 9)
 
         # Get a sub-df with only the users that we're interested in
-        top_users = self.df.groupby(['user'])['size'].sum().sort_values(ascending=False).iloc[:n_users].index.to_list()
-        df = self.df[self.df['user'].isin(top_users)]
+        top_users = self.df.groupby(['username'])['size'].sum().sort_values(ascending=False).iloc[:n_users].index.to_list()
+        df = self.df[self.df['username'].isin(top_users)]
 
         # Automatically find the depth if not passed.
         # This is done by comparing all the paths together, and finding the
@@ -192,32 +207,45 @@ class Dashboard:
                     # with a slash
                     continue
                 if not df['path'].str.startswith(format_path(sample_parts[:i])).all():
-                    depth = i
+                    depth = i - 1
                     break
 
         # Make a regex with the root directory to catch the subdirectories.
         root_dir = format_path(sample_parts[:depth])
         next_dir_regex = re.compile(rf"{root_dir}([a-zA-Z0-9_\-. ]+/)")
-        # Add a column with the sub-directory extracted from the path.
-        df['subdir'] = df['path'].str.extract(next_dir_regex)[0]
+        # Add a column with the subdirectories extracted from the path.
+        df.loc[:, 'subdir'] = df['path'].str.extract(next_dir_regex, expand=False)
         # Filter the df again, keeping only the heaviest directories
-        top_dirs = df.groupby(['subdir'])['size'].sum().sort_values(ascending=False).iloc[n_dir].index.to_list()
+        top_dirs = df.groupby(['subdir'])['size'].sum().sort_values(ascending=False).iloc[:n_dir].index.to_list()
         df = df[df['subdir'].isin(top_dirs)]
 
-        # Now, we only have to group by user and directory, and job done !
-        data = df.groupby(['subdirectory', 'user'])['size'].sum()
+        data = pd.DataFrame(index=top_users, columns=top_dirs)
+        groups = df.groupby(['username', 'subdir'])['size'].sum()
+        # Construct data iteratively
+        # FIXME: not very optimized, though pretty fast with few users and dirs
+        for user, directory in product(top_users, top_dirs):
+            if (user, directory) in groups:
+                data.loc[user, directory] = groups[user, directory]
+        data = data.fillna(0)
+
+        # TODO: Rename empty users (which are in the index)
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
         all_max = data.max(axis=1).max()
         # 2. Get unit index
         unit_index = len(str(all_max)) // 3
-        if all_max % 3 == 0:
+        if len(str(all_max)) % 3 == 0:
             # Avoids having decimal in case we're close to the upper unit.
             unit_index -= 1
         # 3. Apply the standardization on all values
-        data = data.applymap(lambda size: size / (1000 ** unit_index))
+        data = data.apply(lambda size: size / (1000 ** unit_index))
 
+        # FIXME: quickfix
+        data = data.T
+
+        print('Usage per directory data:')
+        print(data)
         data.plot(ax=ax, kind='bar', rot=20)
 
         ax.set_ylabel(f'Size in {self._size_mapping[unit_index]}')
@@ -226,8 +254,8 @@ class Dashboard:
         if standalone:
             plt.show()
 
-    def _extension_by_user_stacked_bar(self, ax=None, standalone: bool = True,
-                                       n_ext: int = 8, n_users: int = 5) -> None:
+    def _extension_by_user_bar_plot(self, ax=None, standalone: bool = True,
+                                    n_ext: int = 8, n_users: int = 5) -> None:
 
         if standalone:
             fig, ax = plt.figure(8, 9)
@@ -239,26 +267,39 @@ class Dashboard:
         df = self.df[self.df['extension'].isin(extensions)]
 
         all_users = df.groupby(['username'])['size'].sum().sort_values(ascending=False)
-        top_n_users = all_users.iloc[:n_users]
+        top_users = all_users.index[:n_users].to_list()
 
         size_by_ext = df.groupby(['username', 'extension'])['size'].sum()
-        top_n = size_by_ext[size_by_ext.index.isin(top_n_users.index, level=0)]
+        top_n = size_by_ext[size_by_ext.index.isin(top_users, level=0)]
+
+        data = pd.DataFrame(index=top_users, columns=extensions)
+        # Construct data iteratively
+        # FIXME: not very optimized, though pretty fast with few users and dirs
+        for user, ext in product(top_users, extensions):
+            if (user, ext) in top_n:
+                data.loc[user, ext] = top_n[user, ext]
+        data = data.fillna(0)
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
-        all_max = top_n.max()
+        all_max = data.max(axis=1).max()
         # 2. Get unit index
         unit_index = len(str(all_max)) // 3
-        if all_max % 3 == 0:
+        if len(str(all_max)) % 3 == 0:
             # Avoids having decimal in case we're close to the upper unit.
             unit_index -= 1
         # 3. Apply the standardization on all values
-        top_n = top_n.apply(lambda size: size / (1000 ** unit_index))
+        data = data.apply(lambda size: size / (1000 ** unit_index))
 
-        # Rename empty extension and empty user
-        # TODO
+        # TODO: Rename empty users (which are in the index)
+        #  And empty extension (which is in the columns)
 
-        top_n.plot(ax=ax, kind='bar', rot=20)
+        # FIXME: quickfix
+        data = data.T
+
+        print('Extension by user data:')
+        print(data)
+        data.plot(ax=ax, kind='bar', rot=20)
 
         ax.set_ylabel(f'Size in {self._size_mapping[unit_index]}')
         ax.set_title('Usage per extension / user')
