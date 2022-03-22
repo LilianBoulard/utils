@@ -43,13 +43,16 @@ class Dashboard:
     def _save_graph(self, location: Path) -> None:
         plt.savefig(location)
 
-    def _user_pie_chart(self, ax=None, standalone: bool = True, n_users: int = 5) -> None:
+    def _user_pie_chart(self, ax=None, standalone: bool = True,
+                        n_users: int = 5, total_size: Optional[int] = None) -> None:
         """
         Displays a pie chart showing which `n` users are using the most space (via file ownership).
 
         :param ax: Optional. Matplotlib axis. If not passed, use `standalone=True`.
         :param bool standalone: Whether the pie should be displayed in a standalone window.
         :param int n_users: The number of users to show at most.
+        :param int total_size: The total space in bytes available on the disk.
+                               Default None (not specified).
         """
 
         def format_pct(percentage, all_values):
@@ -81,8 +84,14 @@ class Dashboard:
 
         # Aggregate the data of the other users in a single entry
         other = sizes.iloc[n_users:]
-        displayed_counts.append(other.sum())
+        other_size = other.sum()
+        displayed_counts.append(other_size)
         displayed_users.append('Other users')
+
+        # Add a free space part to the pie if specified.
+        if total_size is not None:
+            displayed_users.append(total_size - (displayed.sum() + other_size))
+            displayed_users.append('Free space')
 
         print('User pie chart data:')
         print(displayed_counts)
@@ -104,10 +113,10 @@ class Dashboard:
             fig, ax = plt.figure(8, 9)
 
         # Get the extensions that take the most space.
-        extensions = self.df.groupby(['extension'])['size'].sum().sort_values(ascending=False).iloc[:n_ext].index.to_list()
+        top_ext = self.df.groupby(['extension'])['size'].sum().sort_values(ascending=False).iloc[:n_ext].index.to_list()
 
         # Get a sub-df with only the extensions we're not interested in.
-        df = self.df[self.df['extension'].isin(extensions)]
+        df = self.df[self.df['extension'].isin(top_ext)]
 
         # Time ranges. They are mutually exclusive, and must be ordered from
         # the most recent to the oldest.
@@ -129,7 +138,7 @@ class Dashboard:
 
         # "data" will have as index the extensions, as columns the size ranges
         # time range, and as values the total size corresponding.
-        data = pd.DataFrame(index=extensions)
+        data = pd.DataFrame(index=top_ext)
         for range_name, duration in ranges.items():
             sizes = df.groupby(['extension', range_name])['size'].sum()
             sizes = sizes.reset_index(level=[1])
@@ -143,7 +152,7 @@ class Dashboard:
                 sizes = sizes.rename(columns={'size': range_name})
                 data = pd.concat([data, sizes[range_name]], axis=1)
             else:
-                sizes = [0] * len(extensions)
+                sizes = [0] * len(top_ext)
                 data[range_name] = sizes
         data.fillna(0)
 
@@ -189,13 +198,14 @@ class Dashboard:
             fig, ax = plt.figure(8, 9)
 
         # Get a sub-df with only the users that we're interested in
-        top_users = self.df.groupby(['username'])['size'].sum().sort_values(ascending=False).iloc[:n_users].index.to_list()
-        df = self.df[self.df['username'].isin(top_users)]
+        all_users = self.df.groupby(['username'])['size'].sum().sort_values(ascending=False)
+        top_users = all_users.iloc[:n_users].index.to_list()
+        other_users = all_users.iloc[n_users:].index.to_list()
 
         # Automatically find the depth if not passed.
         # This is done by comparing all the paths together, and finding the
         # first directory which diverges.
-        sample_parts = df['path'].iloc[0].split('/')
+        sample_parts = self.df['path'].iloc[0].split('/')
         # Remove the first element from the sample parts, because we assume
         # it is an absolute path, and therefore starts with a slash.
         sample_parts.pop(0)
@@ -206,7 +216,7 @@ class Dashboard:
                     # (testing 0 would be testing if all the paths start
                     # with a slash
                     continue
-                if not df['path'].str.startswith(format_path(sample_parts[:i])).all():
+                if not self.df['path'].str.startswith(format_path(sample_parts[:i])).all():
                     depth = i - 1
                     break
 
@@ -214,21 +224,26 @@ class Dashboard:
         root_dir = format_path(sample_parts[:depth])
         next_dir_regex = re.compile(rf"{root_dir}([a-zA-Z0-9_\-. ]+/)")
         # Add a column with the subdirectories extracted from the path.
-        df.loc[:, 'subdir'] = df['path'].str.extract(next_dir_regex, expand=False)
-        # Filter the df again, keeping only the heaviest directories
-        top_dirs = df.groupby(['subdir'])['size'].sum().sort_values(ascending=False).iloc[:n_dir].index.to_list()
-        df = df[df['subdir'].isin(top_dirs)]
+        self.df.loc[:, 'subdir'] = self.df['path'].str.extract(next_dir_regex, expand=False)
+        # Get the heaviest directories
+        top_dirs = self.df.groupby(['subdir'])['size'].sum().sort_values(ascending=False).iloc[:n_dir].index.to_list()
 
-        data = pd.DataFrame(index=top_users, columns=top_dirs)
-        groups = df.groupby(['username', 'subdir'])['size'].sum()
+        data = pd.DataFrame(index=top_users + ['Other users'], columns=top_dirs)
+        groups = self.df.groupby(['username', 'subdir'])['size'].sum()
         # Construct data iteratively
-        # FIXME: not very optimized, though pretty fast with few users and dirs
         for user, directory in product(top_users, top_dirs):
             if (user, directory) in groups:
                 data.loc[user, directory] = groups[user, directory]
-        data = data.fillna(0)
 
-        # TODO: Rename empty users (which are in the index)
+        # Add other users' data
+        other_df = self.df[self.df['username'].isin(other_users) & self.df['subdir'].isin(top_dirs)]
+        other_groups = other_df.groupby(['username', 'subdir'])['size'].sum()
+        # Add data iteratively
+        for directory in top_dirs:
+            if directory in other_groups.index.levels[1]:
+                data.loc['Other users', directory] = other_groups[:, directory].sum()
+
+        # TODO: Rename empty users
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
@@ -261,24 +276,32 @@ class Dashboard:
             fig, ax = plt.figure(8, 9)
 
         # Get the extensions that take the most space.
-        extensions = self.df.groupby(['extension'])['size'].sum().sort_values(ascending=False).iloc[:n_ext].index.to_list()
+        top_ext = self.df.groupby(['extension'])['size'].sum().sort_values(ascending=False).iloc[:n_ext].index.to_list()
 
         # Get a sub-df with only the extensions we're interested in.
-        df = self.df[self.df['extension'].isin(extensions)]
+        df = self.df[self.df['extension'].isin(top_ext)]
 
         all_users = df.groupby(['username'])['size'].sum().sort_values(ascending=False)
         top_users = all_users.index[:n_users].to_list()
+        other_users = all_users.index[n_users:].to_list()
 
         size_by_ext = df.groupby(['username', 'extension'])['size'].sum()
         top_n = size_by_ext[size_by_ext.index.isin(top_users, level=0)]
 
-        data = pd.DataFrame(index=top_users, columns=extensions)
+        data = pd.DataFrame(index=top_users, columns=top_ext)
         # Construct data iteratively
         # FIXME: not very optimized, though pretty fast with few users and dirs
-        for user, ext in product(top_users, extensions):
+        for user, ext in product(top_users, top_ext):
             if (user, ext) in top_n:
                 data.loc[user, ext] = top_n[user, ext]
-        data = data.fillna(0)
+
+        # Add other users' data
+        other_df = self.df[self.df['username'].isin(other_users) & self.df['extension'].isin(top_ext)]
+        other_groups = other_df.groupby(['username', 'extension'])['size'].sum()
+        # Add data iteratively
+        for ext in top_ext:
+            if ext in other_groups.index.levels[1]:
+                data.loc['Other users', ext] = other_groups[:, ext].sum()
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
