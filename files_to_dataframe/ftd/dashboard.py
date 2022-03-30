@@ -89,11 +89,11 @@ class Dashboard:
 
         # Add a free space part to the pie if specified.
         if self.total_size:
-            displayed_users.append(self.total_size - (displayed.sum() + other_size))
+            displayed_counts.append(self.total_size - (displayed.sum() + other_size))
             displayed_users.append('Free space')
 
         print('User pie chart data:')
-        print(displayed_counts)
+        print(displayed_users, displayed_counts)
         ax.pie(displayed_counts, labels=displayed_users, startangle=140,
                autopct=lambda pct: format_pct(pct, displayed_counts))
         ax.set_title(f'Top {len(displayed_users)} users')
