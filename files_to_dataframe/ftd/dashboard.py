@@ -22,11 +22,12 @@ class Dashboard:
         'EB',
     ]
 
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, total_size: Optional[int] = None):
         self.df = df
+        self.total_size = total_size
 
     @log_duration('Displaying dashboard')
-    def dashboard(self, save: bool = False, location: Path = None) -> None:
+    def dashboard(self, save: bool = False, location: Optional[Path] = None) -> None:
         """
         Displays all the graphs in a subplot.
         """
@@ -44,15 +45,13 @@ class Dashboard:
         plt.savefig(location)
 
     def _user_pie_chart(self, ax=None, standalone: bool = True,
-                        n_users: int = 5, total_size: Optional[int] = None) -> None:
+                        n_users: int = 5) -> None:
         """
         Displays a pie chart showing which `n` users are using the most space (via file ownership).
 
         :param ax: Optional. Matplotlib axis. If not passed, use `standalone=True`.
         :param bool standalone: Whether the pie should be displayed in a standalone window.
         :param int n_users: The number of users to show at most.
-        :param int total_size: The total space in bytes available on the disk.
-                               Default None (not specified).
         """
 
         def format_pct(percentage, all_values):
@@ -89,8 +88,8 @@ class Dashboard:
         displayed_users.append('Other users')
 
         # Add a free space part to the pie if specified.
-        if total_size is not None:
-            displayed_users.append(total_size - (displayed.sum() + other_size))
+        if self.total_size:
+            displayed_users.append(self.total_size - (displayed.sum() + other_size))
             displayed_users.append('Free space')
 
         print('User pie chart data:')
