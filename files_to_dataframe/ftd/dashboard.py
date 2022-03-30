@@ -158,7 +158,7 @@ class Dashboard:
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
-        all_max = data.max(axis=1).max()
+        all_max = int(data.max(axis=1).max())
         # 2. Get unit index
         unit_index = len(str(all_max)) // 3
         if len(str(all_max)) % 3 == 0:
@@ -247,7 +247,7 @@ class Dashboard:
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
-        all_max = data.max(axis=1).max()
+        all_max = int(data.max(axis=1).max())
         # 2. Get unit index
         unit_index = len(str(all_max)) // 3
         if len(str(all_max)) % 3 == 0:
@@ -305,7 +305,7 @@ class Dashboard:
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
-        all_max = data.max(axis=1).max()
+        all_max = int(data.max(axis=1).max())
         # 2. Get unit index
         unit_index = len(str(all_max)) // 3
         if len(str(all_max)) % 3 == 0:
