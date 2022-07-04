@@ -19,8 +19,8 @@ _parser.add_argument("-d", "--directory",
                           "Must be an absolute path.",
                      type=str, nargs=1, required=True)
 _parser.add_argument("-l", "--limit",
-                     help="Memory usage limit, in bytes. "
-                          "Default is 2147483648 (2GB).",
+                     help="Memory usage limit, in megabytes. "
+                          "Default is 2000 (2GB).",
                      type=int, nargs=1)
 _parser.add_argument("--skipparse",
                      help="Specify to skip parsing. "
@@ -42,10 +42,11 @@ _root_directory = Path(_args.directory[0]).resolve()
 if not _root_directory.exists():
     raise RuntimeError('Invalid root directory')
 
+# Set memory limit (in bytes)
 if _args.limit:
-    _mem_limit = _args.limit[0]
+    _mem_limit = _args.limit[0] * 1000 * 1000
 else:
-    _mem_limit = 2 * 1024 * 1024 * 1024
+    _mem_limit = 2 * 1000 * 1000 * 1000
 
 if _args.skipparse:
     skip_parsing = True
