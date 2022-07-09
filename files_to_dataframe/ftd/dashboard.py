@@ -197,11 +197,6 @@ class Dashboard:
         if standalone:
             fig, ax = plt.figure(8, 9)
 
-        # Get a sub-df with only the users that we're interested in
-        all_users = self.df.groupby(['username'])['size'].sum().sort_values(ascending=False)
-        top_users = all_users.iloc[:n_users].index.to_list()
-        other_users = all_users.iloc[n_users:].index.to_list()
-
         # Automatically find the depth if not passed.
         # This is done by comparing all the paths together, and finding the
         # first directory which diverges.
@@ -225,23 +220,32 @@ class Dashboard:
         next_dir_regex = re.compile(rf"{root_dir}([a-zA-Z0-9_\-. ]+/)")
         # Add a column with the subdirectories extracted from the path.
         self.df.loc[:, 'subdir'] = self.df['path'].str.extract(next_dir_regex, expand=False)
+        # Remove lines with missing subdir (files that are at the root)
+        self.df = self.df[~self.df['subdir'].isna()]
         # Get the heaviest directories
         top_dirs = self.df.groupby(['subdir'])['size'].sum().sort_values(ascending=False).iloc[:n_dir].index.to_list()
 
-        data = pd.DataFrame(index=top_users + ['Other users'], columns=top_dirs)
+        # Classify users
+        all_users = self.df.groupby(['username'])['size'].sum().sort_values(ascending=False)
+        top_users = all_users.iloc[:n_users].index.to_list()
+        other_users = all_users.iloc[n_users:].index.to_list()
+
+        displayed_users = top_users + ['Other users'] if other_users else top_users
+        data = pd.DataFrame(index=displayed_users, columns=top_dirs)
         groups = self.df.groupby(['username', 'subdir'])['size'].sum()
         # Construct data iteratively
         for user, directory in product(top_users, top_dirs):
             if (user, directory) in groups:
                 data.loc[user, directory] = groups[user, directory]
 
-        # Add other users' data
-        other_df = self.df[self.df['username'].isin(other_users) & self.df['subdir'].isin(top_dirs)]
-        other_groups = other_df.groupby(['username', 'subdir'])['size'].sum()
-        # Add data iteratively
-        for directory in top_dirs:
-            if directory in other_groups.index.levels[1]:
-                data.loc['Other users', directory] = other_groups[:, directory].sum()
+        if len(other_users) > 0:
+            # Add other users' data
+            other_df = self.df[self.df['username'].isin(other_users) & self.df['subdir'].isin(top_dirs)]
+            other_groups = other_df.groupby(['username', 'subdir'])['size'].sum()
+            # Add data iteratively
+            for directory in top_dirs:
+                if directory in other_groups.index.levels[1]:
+                    data.loc['Other users', directory] = other_groups[:, directory].sum()
 
         # TODO: Rename empty users
 
