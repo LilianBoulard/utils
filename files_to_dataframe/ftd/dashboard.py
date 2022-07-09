@@ -38,7 +38,7 @@ class Dashboard:
         self._extension_by_user_bar_plot(axes[1, 1], standalone=False)
         if save:
             self._save_graph(location)
-            print(f'Saved graph at {location!r}')
+            print(f'Saved graph at {location!s}')
         plt.show()
 
     def _save_graph(self, location: Path) -> None:
@@ -84,8 +84,9 @@ class Dashboard:
         # Aggregate the data of the other users in a single entry
         other = sizes.iloc[n_users:]
         other_size = other.sum()
-        displayed_counts.append(other_size)
-        displayed_users.append('Other users')
+        if other_size > 0:
+            displayed_counts.append(other_size)
+            displayed_users.append('Other users')
 
         # Add a free space part to the pie if specified.
         if self.total_size:
@@ -94,7 +95,7 @@ class Dashboard:
 
         print('User pie chart data:')
         print(displayed_users, displayed_counts)
-        ax.pie(displayed_counts, labels=displayed_users, startangle=140,
+        ax.pie(displayed_counts, labels=displayed_users, startangle=300,
                autopct=lambda pct: format_pct(pct, displayed_counts))
         ax.set_title(f'Top {len(displayed_users)} users')
 
@@ -153,7 +154,7 @@ class Dashboard:
             else:
                 sizes = [0] * len(top_ext)
                 data[range_name] = sizes
-        data.fillna(0)
+        data = data.fillna(0)
 
         # Convert sizes to the appropriate unit scale
         # 1. Get the overall max value
