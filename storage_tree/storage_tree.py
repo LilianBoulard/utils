@@ -19,7 +19,8 @@ from argparse import ArgumentParser
 
 class StorageTreeDirectory:
 
-    def __init__(self, name: str, parent, level: int):
+    def __init__(self, path: str, name: str, parent, level: int):
+        self.path: str = path
         self.name: str = name
         self.parent = parent
         self.children: list = []
@@ -51,7 +52,8 @@ class StorageTreeDirectory:
 
     def compute_size(self) -> int:
         """
-        Compute the size of this directory by summing the sizes of its child directories and files.
+        Compute the size of this directory by summing the sizes of its
+        child directories and files.
 
         :return int: The size, in bytes, of this directory.
         """
@@ -93,7 +95,12 @@ class StorageTree:
         self.view = view_file.View()
 
         self.nb_results = len(self.parser.content)
-        self.root = StorageTreeDirectory(name=self.parser.root, parent=self, level=0)
+        self.root = StorageTreeDirectory(
+            path='',
+            name=self.parser.root,
+            parent=self,
+            level=0,
+        )
 
     def __repr__(self):
         if not self._ran:
@@ -148,14 +155,18 @@ class StorageTree:
                 pass
 
             # Now that we are in the good node, we'll steep down.
-            # Get the nodes, from the divergence index, to the leaf (exclusive).
+            # Get the nodes from the divergence index to the leaf (exclusive).
             parts = current_leaf_path.parts[divergence_index:-1]
             for i, p in enumerate(parts):
+                level = divergence_index + i + 1
+                path = os.sep.join(current_leaf_path.parts[:level])
+                #print(level, path)
                 current_node = current_node.child(
                     StorageTreeDirectory(
+                        path=path,
                         name=p,
                         parent=current_node,
-                        level=divergence_index + i + 1
+                        level=level
                     )
                 )
             else:

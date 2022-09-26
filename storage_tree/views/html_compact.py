@@ -17,7 +17,7 @@ class View(BaseView):
         r += "</summary>"
         r = "<ul>"
         for child in obj.children:
-            r += child.__repr__()
+            r += repr(child)
         r += "</ul>"
         r += "</details>"
         return r
@@ -39,7 +39,7 @@ class View(BaseView):
         """
         r = "<html>"
         r += "<body>"
-        r += obj.root.__repr__()
+        r += repr(obj.root)
         r += "</body>"
         r += "</html>"
         return r

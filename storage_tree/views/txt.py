@@ -16,7 +16,7 @@ class View(BaseView):
             # We'll just append the repr of each child.
             # As we'll see in the next method, 
             # it takes care of properly displaying itself.
-            r += child.__repr__()
+            r += repr(child)
         # Return the full string
         return r
 
@@ -35,4 +35,4 @@ class View(BaseView):
     def st_repr(obj):
         # Just return the repr of the root, 
         # which is the root StorageTreeDirectory.
-        return obj.root.__repr__()
+        return repr(obj.root)

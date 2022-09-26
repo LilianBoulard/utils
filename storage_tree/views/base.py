@@ -1,3 +1,6 @@
+from abc import ABC, abstractmethod
+
+
 def human_readable_bytes(size: int) -> str:
     """
     Takes a size in bytes and returns it human-readable.
@@ -15,7 +18,7 @@ def human_readable_bytes(size: int) -> str:
     return size
 
 
-class BaseView:
+class BaseView(ABC):
 
     """
     To create a new view (a new way of visualizing the tree),
@@ -24,6 +27,7 @@ class BaseView:
     """
 
     @staticmethod
+    @abstractmethod
     def std_repr(obj) -> str:
         """
         Mocks `StorageTreeDirectory.__repr__()`.
@@ -41,6 +45,7 @@ class BaseView:
         raise NotImplemented
 
     @staticmethod
+    @abstractmethod
     def stf_repr(obj) -> str:
         """
         Mocks `StorageTreeFile.__repr__()`.
@@ -53,6 +58,7 @@ class BaseView:
         raise NotImplemented
 
     @staticmethod
+    @abstractmethod
     def st_repr(obj) -> str:
         """
         Mocks `StorageTree.__repr__()`.

@@ -65,11 +65,11 @@ class View(BaseView):
                 # The child is a file
                 r += f"{eol}</li>"
                 r += f"<ul style=\"list-style-type: {list_styles[obj.level % len(list_styles)]}\">"
-                r += child.__repr__()
+                r += repr(child)
                 r += "</ul>"
             elif is_child_std:
                 # The child is a directory.
-                r += child.__repr__()
+                r += repr(child)
         elif len(children) > 1:
             # We have several children.
             # We want to display one on each line,
@@ -82,7 +82,7 @@ class View(BaseView):
                 if child.size < display_threshold:
                     leftover_children_size += child.size
                 else:
-                    r += child.__repr__()
+                    r += repr(child)
             else:
                 if leftover_children_size > 0:
                     dummy_obj = LeftoverChild(path="", name="...", size=leftover_children_size,
@@ -117,7 +117,7 @@ class View(BaseView):
         r = "<html>"
         r += "<body>"
         r += f"<ul style=\"list-style-type: {list_styles[1]}\">"
-        r += obj.root.__repr__()
+        r += repr(obj.root)
         r += "</ul>"
         r += "</body>"
         r += "</html>"

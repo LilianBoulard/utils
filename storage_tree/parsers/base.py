@@ -69,4 +69,5 @@ class BaseParser(ABC):
         """
         for path in self.content.keys():
             # We iter only once for maximum efficiency
-            return path.parts[0]
+            # If the path is absolute, parts[0] is '/'.
+            return path.parts[1]

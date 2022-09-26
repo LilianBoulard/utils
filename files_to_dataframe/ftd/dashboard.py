@@ -211,7 +211,7 @@ class Dashboard:
                     # (testing 0 would be testing if all the paths start
                     # with a slash
                     continue
-                if not self.df['path'].str.startswith(format_path(sample_parts[:i])).all():
+                if not self.df['path'].str.startswith(format_path(sample_parts[:i + 1])).all():
                     depth = i - 1
                     break
 
